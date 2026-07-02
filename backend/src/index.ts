@@ -53,6 +53,13 @@ app.get('/api/health', (req: Request, res: Response) => {
   // We respond with: {"status": "Server is running!"}
   res.json({ status: 'Server is running!' });
 });
+// NEW: Welcome endpoint - says hi to anyone who visits
+app.get('/api/welcome', (req: Request, res: Response) => {
+  res.json({ 
+    message: 'Welcome to Dada\'s Store!',
+    owner: 'Your Name Here' 
+  });
+});
 
 // "app.get" = listening for GET requests
 // "/api/health" = the URL path

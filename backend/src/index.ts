@@ -73,6 +73,22 @@ app.get('/api/welcome', (req: Request, res: Response) => {
 // ===================================
 // We'll add these:
 // - GET /api/products (get all products)
+app.get('/api/products', (req: Request, res: Response) => {
+  // Get all products from database
+  const allProducts = [
+    { id: 1, title: "Math Ebook", price: 9.99 },
+    { id: 2, title: "Science Worksheet", price: 4.99 }
+  ];
+  
+  // Send back as JSON
+  res.json(allProducts);
+  
+  // Customer's app receives:
+  // [
+  //   { id: 1, title: "Math Ebook", price: 9.99 },
+  //   { id: 2, title: "Science Worksheet", price: 4.99 }
+  // ]
+});
 // - GET /api/products/:id (get one product)
 // - POST /api/products (admin adds product)
 // - PUT /api/products/:id (admin edits product)

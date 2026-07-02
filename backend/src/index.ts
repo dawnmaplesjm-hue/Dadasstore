@@ -90,6 +90,22 @@ app.get('/api/products', (req: Request, res: Response) => {
   // ]
 });
 // - GET /api/products/:id (get one product)
+// Function that GETS a product from our store
+function getProduct(productId: number) {
+  // Look in our database for this product
+  // If found: return the product
+  // If not found: return null
+  
+  return {
+    id: productId,
+    title: "Math Ebook",
+    price: 9.99
+  };
+}
+
+// USE it
+const myProduct = getProduct(1);
+console.log(myProduct.title);  // Prints: "Math Ebook"
 // - POST /api/products (admin adds product)
 // - PUT /api/products/:id (admin edits product)
 // - DELETE /api/products/:id (admin deletes product)

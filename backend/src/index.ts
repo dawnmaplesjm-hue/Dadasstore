@@ -43,6 +43,13 @@ app.use(cors());
 // "cors()" = CORS = Cross-Origin Resource Sharing
 // Without this, mobile app can't talk to backend
 
+// Sample product data stored in memory for learning.
+// This is not a real database, so data resets when the server restarts.
+const products = [
+  { id: 1, title: 'Math Ebook', price: 9.99 },
+  { id: 2, title: 'Science Worksheet', price: 4.99 }
+];
+
 // ===================================
 // ENDPOINTS (doors people can knock on)
 // ===================================
@@ -73,42 +80,95 @@ app.get('/api/welcome', (req: Request, res: Response) => {
 // ===================================
 // We'll add these:
 // - GET /api/products (get all products)
-app.get('/api/products', (req: Request, res: Response) => {
-  // Get all products from database
-  const allProducts = [
-    { id: 1, title: "Math Ebook", price: 9.99 },
-    { id: 2, title: "Science Worksheet", price: 4.99 }
-  ];
-  
-  // Send back as JSON
-  res.json(allProducts);
-  
-  // Customer's app receives:
-  // [
-  //   { id: 1, title: "Math Ebook", price: 9.99 },
-  //   { id: 2, title: "Science Worksheet", price: 4.99 }
-  // ]
-});
 // - GET /api/products/:id (get one product)
-// Function that GETS a product from our store
-function getProduct(productId: number) {
-  // Look in our database for this product
-  // If found: return the product
-  // If not found: return null
-  
-  return {
-    id: productId,
-    title: "Math Ebook",
-    price: 9.99
-  };
-}
+app.get('/api/products', (req: Request, res: Response) => {
+  // Send all products as JSON
+  res.json(products);
+});
 
-// USE it
-const myProduct = getProduct(1);
-console.log(myProduct.title);  // Prints: "Math Ebook"
-// - POST /api/products (admin adds product)
-// - PUT /api/products/:id (admin edits product)
-// - DELETE /api/products/:id (admin deletes product)
+// GET /api/products/:id returns a single product by its ID
+app.get('/api/products/:id', (req: Request, res: Response) => {
+  const productId = Number(req.params.id);
+
+  if (Number.isNaN(productId)) {
+    return res.status(400).json({ error: 'Product ID must be a number.' });
+  }
+
+  const product = products.find((item) => item.id === productId);
+
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found.' });
+  }
+
+  res.json(product);
+});
+
+// POST /api/products accepts a new product and returns it
+app.post('/api/products', (req: Request, res: Response) => {
+  const { title, price } = req.body;
+
+  // Basic validation for learning purposes
+  if (!title || typeof title !== 'string' || !price || typeof price !== 'number') {
+    return res.status(400).json({
+      error: 'Please send a valid product with a string title and numeric price.'
+    });
+  }
+
+  const newProduct = {
+    id: products.length + 1,
+    title,
+    price
+  };
+
+  products.push(newProduct);
+
+  res.status(201).json(newProduct);
+});
+
+// PUT /api/products/:id updates a product by its ID
+app.put('/api/products/:id', (req: Request, res: Response) => {
+  const productId = Number(req.params.id);
+  const { title, price } = req.body;
+
+  if (Number.isNaN(productId)) {
+    return res.status(400).json({ error: 'Product ID must be a number.' });
+  }
+
+  const product = products.find((item) => item.id === productId);
+
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found.' });
+  }
+
+  if (title && typeof title === 'string') {
+    product.title = title;
+  }
+
+  if (price && typeof price === 'number') {
+    product.price = price;
+  }
+
+  res.json(product);
+});
+
+// DELETE /api/products/:id removes a product by its ID
+app.delete('/api/products/:id', (req: Request, res: Response) => {
+  const productId = Number(req.params.id);
+
+  if (Number.isNaN(productId)) {
+    return res.status(400).json({ error: 'Product ID must be a number.' });
+  }
+
+  const index = products.findIndex((item) => item.id === productId);
+
+  if (index === -1) {
+    return res.status(404).json({ error: 'Product not found.' });
+  }
+
+  products.splice(index, 1);
+
+  res.json({ message: 'Product deleted successfully.' });
+});
 
 // ===================================
 // START THE SERVER
@@ -125,8 +185,10 @@ app.listen(port, () => {
 
 Try visiting these in your browser:
 - http://localhost:${port}/api/health
+- http://localhost:${port}/api/products
+- http://localhost:${port}/api/products/1
 
-Next: Add /api/products endpoint!
+You can also POST, PUT, and DELETE /api/products.
   `);
 });
 

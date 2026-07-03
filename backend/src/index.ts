@@ -7,6 +7,9 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
 
 // "import" = bring in code from other files
 // "express" = the web server tool
@@ -43,11 +46,47 @@ app.use(cors());
 // "cors()" = CORS = Cross-Origin Resource Sharing
 // Without this, mobile app can't talk to backend
 
+// Store uploaded PDF files in a local folder.
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Make uploaded files available through a URL.
+app.use('/uploads', express.static(uploadsDir));
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, callback) => callback(null, uploadsDir),
+    filename: (_req, file, callback) => {
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      callback(null, `${Date.now()}-${safeName}`);
+    }
+  }),
+  fileFilter: (_req, file, callback) => {
+    const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Only PDF files are allowed.'));
+  }
+});
+
 // Sample product data stored in memory for learning.
 // This is not a real database, so data resets when the server restarts.
-const products = [
-  { id: 1, title: 'Math Ebook', price: 9.99 },
-  { id: 2, title: 'Science Worksheet', price: 4.99 }
+type Product = {
+  id: number;
+  title: string;
+  price: number;
+  pdfUrl?: string;
+  pdfName?: string;
+};
+
+const products: Product[] = [
+  { id: 1, title: 'Math Ebook', price: 9.99, pdfUrl: '' },
+  { id: 2, title: 'Science Worksheet', price: 4.99, pdfUrl: '' }
 ];
 
 // ===================================
@@ -117,7 +156,35 @@ app.post('/api/products', (req: Request, res: Response) => {
   const newProduct = {
     id: products.length + 1,
     title,
-    price
+    price,
+    pdfUrl: ''
+  };
+
+  products.push(newProduct);
+
+  res.status(201).json(newProduct);
+});
+
+// POST /api/products/upload accepts a PDF file and saves it with the product
+app.post('/api/products/upload', upload.single('pdf'), (req: Request, res: Response) => {
+  const { title, price } = req.body;
+
+  if (!title || typeof title !== 'string' || !price || Number.isNaN(Number(price))) {
+    return res.status(400).json({
+      error: 'Please send a valid product title, price, and PDF file.'
+    });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Please choose a PDF file to upload.' });
+  }
+
+  const newProduct = {
+    id: products.length + 1,
+    title: title.trim(),
+    price: Number(price),
+    pdfUrl: `/uploads/${req.file.filename}`,
+    pdfName: req.file.originalname
   };
 
   products.push(newProduct);

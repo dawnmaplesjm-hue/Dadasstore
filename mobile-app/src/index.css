@@ -280,11 +280,24 @@ a {
   border-radius: 14px;
   background: linear-gradient(135deg, #d100ff 0%, #6030ff 100%);
   color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
   font-weight: 700;
-  font-size: 0.85rem;
+  padding: 8px;
+}
+
+.thumb-file-type {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.thumb-category {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .product-copy h3 {
@@ -296,6 +309,23 @@ a {
   margin: 0;
   color: rgba(236, 224, 255, 0.7);
   font-size: 0.78rem;
+}
+
+.meta-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+.meta-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(248, 241, 255, 0.9);
+  padding: 3px 8px;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
 }
 
 .product-row {

@@ -31,7 +31,7 @@ export default function App() {
   const [error, setError] = useState('');
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
-  const categoryLabels = ['Digital Books', 'Templates', 'Worksheets', 'Bundles'];
+  const categoryLabels = ['Ebooks', 'Templates', 'Guides', 'Bundles'];
 
   const getSessionId = () => new URLSearchParams(window.location.search).get('session_id') || '';
 
@@ -127,22 +127,40 @@ export default function App() {
 
   const formatPurchaseDate = (isoDate: string) => new Date(isoDate).toLocaleDateString();
 
+  const getDigitalCategory = (product: Product) => {
+    const value = `${product.title} ${product.pdfName || ''}`.toLowerCase();
+
+    if (value.includes('template')) {
+      return 'Template';
+    }
+
+    if (value.includes('guide')) {
+      return 'Guide';
+    }
+
+    if (value.includes('worksheet') || value.includes('workbook')) {
+      return 'Worksheet';
+    }
+
+    return 'Ebook';
+  };
+
   return (
     <div className="store-shell">
       <main className="store-phone">
         <header className="top-row">
           <div>
-            <p className="overline">Discover</p>
-            <h1>Dada Shop</h1>
+            <p className="overline">Digital Store</p>
+            <h1>Dada Downloads</h1>
           </div>
           <button className="icon-pill" type="button">Cart</button>
         </header>
 
         <section className="promo-banner">
-          <p className="overline">Limited Deal</p>
-          <h2>Summer learning bundle</h2>
-          <p>Instant PDF delivery after checkout. New products added every week.</p>
-          <button className="cta-pill" type="button">Explore now</button>
+          <p className="overline">New Release</p>
+          <h2>Premium digital bundle</h2>
+          <p>Buy once, download instantly, and access your files anytime.</p>
+          <button className="cta-pill" type="button">Browse downloads</button>
         </section>
 
         <section className="search-strip">
@@ -187,8 +205,8 @@ export default function App() {
 
         <section className="section-card">
           <div className="section-head">
-            <h2>Featured Drops</h2>
-            <span>Fresh this week</span>
+            <h2>Top Downloads</h2>
+            <span>Ready instantly</span>
           </div>
 
           {loading ? (
@@ -199,10 +217,17 @@ export default function App() {
             <div className="product-grid">
               {purchasableProducts.map((product) => (
                 <article className="product-card" key={product.id}>
-                  <div className="thumb-block" aria-hidden="true">PDF</div>
+                  <div className="thumb-block" aria-hidden="true">
+                    <span className="thumb-file-type">PDF</span>
+                    <span className="thumb-category">{getDigitalCategory(product)}</span>
+                  </div>
                   <div className="product-copy">
                     <h3>{product.title}</h3>
                     <p>{product.pdfName || 'Instant download after payment.'}</p>
+                    <div className="meta-row">
+                      <span className="meta-chip">Instant Access</span>
+                      <span className="meta-chip">Secure Checkout</span>
+                    </div>
                     <div className="product-row">
                       <strong>${product.price.toFixed(2)}</strong>
                       <button className="buy-button" type="button" onClick={() => startCheckout(product.id)}>
@@ -220,14 +245,14 @@ export default function App() {
           <section className="section-card">
             <div className="section-head">
               <h2>Coming Soon</h2>
-              <span>Needs PDF upload</span>
+              <span>File upload pending</span>
             </div>
             <div className="coming-list">
               {comingSoonProducts.map((product) => (
                 <article className="coming-item" key={product.id}>
                   <div>
                     <strong>{product.title}</strong>
-                    <p>${product.price.toFixed(2)}</p>
+                    <p>${product.price.toFixed(2)} • Upload file to publish</p>
                   </div>
                   <span className="locked">Unavailable</span>
                 </article>

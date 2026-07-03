@@ -377,6 +377,8 @@ app.post('/api/checkout/create-session', async (req: Request, res: Response) => 
     return res.status(500).json({ error: 'Stripe is not configured on the server.' });
   }
 
+  const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin : frontendUrl;
+
   const productId = Number(req.body.productId);
   if (Number.isNaN(productId)) {
     return res.status(400).json({ error: 'Product ID must be a number.' });
@@ -394,8 +396,8 @@ app.post('/api/checkout/create-session', async (req: Request, res: Response) => 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      success_url: `${frontendUrl}/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${frontendUrl}/?canceled=true`,
+      success_url: `${requestOrigin}/?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${requestOrigin}/?canceled=true`,
       metadata: { productId: String(product.id) },
       line_items: [
         {

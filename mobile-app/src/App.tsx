@@ -18,6 +18,9 @@ type Purchase = {
   downloadUrl: string;
 };
 
+const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
+
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [recentPurchases, setRecentPurchases] = useState<Purchase[]>([]);
@@ -28,6 +31,7 @@ export default function App() {
   const [error, setError] = useState('');
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
+  const categoryLabels = ['Digital Books', 'Templates', 'Worksheets', 'Bundles'];
 
   const getSessionId = () => new URLSearchParams(window.location.search).get('session_id') || '';
 
@@ -50,13 +54,13 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${configuredApiBaseUrl}/api/products`)
       .then((res) => res.json())
       .then((data) => setProducts(data))
       .catch(() => setError('Unable to load products.'))
       .finally(() => setLoading(false));
 
-    fetch('http://localhost:5000/api/purchases/recent')
+    fetch(`${configuredApiBaseUrl}/api/purchases/recent`)
       .then((res) => res.json())
       .then((data) => setRecentPurchases(data))
       .catch(() => setRecentPurchases([]));
@@ -77,7 +81,7 @@ export default function App() {
     setError('');
     setCheckoutMessage('Verifying your payment and preparing the download...');
 
-    fetch(`http://localhost:5000/api/checkout/session/${sessionId}`)
+    fetch(`${configuredApiBaseUrl}/api/checkout/session/${sessionId}`)
       .then(async (res) => {
         const data = await res.json();
 
@@ -85,7 +89,7 @@ export default function App() {
           throw new Error(data.error || 'Unable to verify the payment.');
         }
 
-        const fullDownloadUrl = `http://localhost:5000${data.downloadUrl}`;
+        const fullDownloadUrl = `${configuredApiBaseUrl}${data.downloadUrl}`;
         setDownloadUrl(fullDownloadUrl);
         await triggerBlobDownload(fullDownloadUrl, `${data.productTitle}.pdf`);
         setCheckoutMessage(`Payment confirmed for ${data.productTitle}. Your download has started.`);
@@ -103,7 +107,7 @@ export default function App() {
     setCheckoutMessage('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/checkout/create-session', {
+      const response = await fetch(`${configuredApiBaseUrl}/api/checkout/create-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId })
@@ -121,110 +125,90 @@ export default function App() {
     }
   };
 
+  const formatPurchaseDate = (isoDate: string) => new Date(isoDate).toLocaleDateString();
+
   return (
-    <div className="app-shell">
-      <main className="app-frame">
-        <section className="app-hero">
-          <span className="eyebrow">Customer App</span>
-          <h1>Shop digital products and download them right after Stripe checkout.</h1>
-          <p>
-            Customers can buy a product, pay with Stripe, and instantly download the PDF after payment is verified.
-          </p>
+    <div className="store-shell">
+      <main className="store-phone">
+        <header className="top-row">
+          <div>
+            <p className="overline">Discover</p>
+            <h1>Dada Shop</h1>
+          </div>
+          <button className="icon-pill" type="button">Cart</button>
+        </header>
+
+        <section className="promo-banner">
+          <p className="overline">Limited Deal</p>
+          <h2>Summer learning bundle</h2>
+          <p>Instant PDF delivery after checkout. New products added every week.</p>
+          <button className="cta-pill" type="button">Explore now</button>
         </section>
 
-        {error && <div className="message error">{error}</div>}
+        <section className="search-strip">
+          <input type="text" readOnly value="Search digital products" aria-label="Search" />
+          <button className="icon-pill" type="button">Filter</button>
+        </section>
+
+        <section className="chip-row">
+          {categoryLabels.map((label) => (
+            <span key={label} className="chip">{label}</span>
+          ))}
+        </section>
+
+        {error && <div className="status error">{error}</div>}
 
         {(checkingOut || checkoutMessage) && (
-          <section className="checkout-card">
+          <section className="status success">
             <div>
-              <span className="checkout-label">Secure Checkout</span>
-              <h2>{checkingOut ? 'Processing your order' : 'Order complete'}</h2>
+              <strong>{checkingOut ? 'Processing payment' : 'Order complete'}</strong>
               <p>{checkoutMessage || 'Your purchase is ready.'}</p>
             </div>
             {downloadUrl && !checkingOut && (
-              <a className="primary-link" href={downloadUrl}>
-                Download again
-              </a>
+              <a className="mini-link" href={downloadUrl}>Download again</a>
             )}
           </section>
         )}
 
-        <section className="history-card">
-          <div className="catalog-header">
-            <div>
-              <h2>Recent purchases</h2>
-              <p>These completed Stripe orders are saved on the server.</p>
-            </div>
-          </div>
-
-          {recentPurchases.length === 0 ? (
-            <p className="message">No completed purchases yet.</p>
-          ) : (
-            <div className="history-list">
-              {recentPurchases.map((purchase) => (
-                <article className="history-item" key={purchase.sessionId}>
-                  <div>
-                    <strong>{purchase.productTitle}</strong>
-                    <p>${purchase.productPrice.toFixed(2)} purchased on {new Date(purchase.purchasedAt).toLocaleString()}</p>
-                  </div>
-                  <a className="primary-link" href={`http://localhost:5000${purchase.downloadUrl}`}>
-                    Download
-                  </a>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="feature-strip">
-          <div>
+        <section className="stats-grid">
+          <article>
             <strong>{purchasableProducts.length}</strong>
             <span>Buy now</span>
-          </div>
-          <div>
+          </article>
+          <article>
             <strong>{comingSoonProducts.length}</strong>
             <span>Coming soon</span>
-          </div>
-          <div>
-            <strong>Live</strong>
-            <span>Backend connected</span>
-          </div>
+          </article>
+          <article>
+            <strong>{recentPurchases.length}</strong>
+            <span>Purchased</span>
+          </article>
         </section>
 
-        <section className="catalog-card">
-          <div className="catalog-header">
-            <div>
-              <h2>Ready to buy</h2>
-              <p>These products already have a PDF attached, so Stripe checkout will work and the file will download after payment.</p>
-            </div>
+        <section className="section-card">
+          <div className="section-head">
+            <h2>Featured Drops</h2>
+            <span>Fresh this week</span>
           </div>
 
           {loading ? (
-            <p className="message">Loading products...</p>
+            <p className="muted">Loading products...</p>
           ) : purchasableProducts.length === 0 ? (
-            <p className="message">No products are ready for checkout yet.</p>
+            <p className="muted">No products are ready for checkout yet.</p>
           ) : (
-            <div className="catalog-grid">
+            <div className="product-grid">
               {purchasableProducts.map((product) => (
                 <article className="product-card" key={product.id}>
-                  <div className="product-top">
-                    <div>
-                      <span className="product-tag">Digital Product</span>
-                      <h3>{product.title}</h3>
+                  <div className="thumb-block" aria-hidden="true">PDF</div>
+                  <div className="product-copy">
+                    <h3>{product.title}</h3>
+                    <p>{product.pdfName || 'Instant download after payment.'}</p>
+                    <div className="product-row">
+                      <strong>${product.price.toFixed(2)}</strong>
+                      <button className="buy-button" type="button" onClick={() => startCheckout(product.id)}>
+                        Buy now
+                      </button>
                     </div>
-                    <div className="price-pill">${product.price.toFixed(2)}</div>
-                  </div>
-
-                  <div className="product-bottom">
-                    <p>{product.pdfName ? 'Instant download after payment.' : 'Add a PDF before enabling checkout.'}</p>
-                    <button
-                      className="primary-link"
-                      type="button"
-                      disabled={!product.pdfUrl}
-                      onClick={() => startCheckout(product.id)}
-                    >
-                      {product.pdfUrl ? 'Buy with Stripe' : 'Checkout unavailable'}
-                    </button>
                   </div>
                 </article>
               ))}
@@ -233,34 +217,48 @@ export default function App() {
         </section>
 
         {comingSoonProducts.length > 0 && (
-          <section className="catalog-card" style={{ marginTop: '18px' }}>
-            <div className="catalog-header">
-              <div>
-                <h2>Coming soon</h2>
-                <p>These products are in the catalog, but they still need a PDF before checkout can be enabled.</p>
-              </div>
+          <section className="section-card">
+            <div className="section-head">
+              <h2>Coming Soon</h2>
+              <span>Needs PDF upload</span>
             </div>
-
-            <div className="catalog-grid">
+            <div className="coming-list">
               {comingSoonProducts.map((product) => (
-                <article className="product-card" key={product.id}>
-                  <div className="product-top">
-                    <div>
-                      <span className="product-tag">Not purchasable yet</span>
-                      <h3>{product.title}</h3>
-                    </div>
-                    <div className="price-pill">${product.price.toFixed(2)}</div>
+                <article className="coming-item" key={product.id}>
+                  <div>
+                    <strong>{product.title}</strong>
+                    <p>${product.price.toFixed(2)}</p>
                   </div>
-
-                  <div className="product-bottom">
-                    <p>Add a PDF in the admin panel to unlock Stripe checkout.</p>
-                    <span className="secondary-button">Checkout unavailable</span>
-                  </div>
+                  <span className="locked">Unavailable</span>
                 </article>
               ))}
             </div>
           </section>
         )}
+
+        <section className="section-card">
+          <div className="section-head">
+            <h2>Purchase History</h2>
+            <span>Saved on server</span>
+          </div>
+          {recentPurchases.length === 0 ? (
+            <p className="muted">No completed purchases yet.</p>
+          ) : (
+            <div className="history-list">
+              {recentPurchases.map((purchase) => (
+                <article className="history-item" key={purchase.sessionId}>
+                  <div>
+                    <strong>{purchase.productTitle}</strong>
+                    <p>{formatPurchaseDate(purchase.purchasedAt)}</p>
+                  </div>
+                  <a className="mini-link" href={`${configuredApiBaseUrl}${purchase.downloadUrl}`}>
+                    Download
+                  </a>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

@@ -10,7 +10,8 @@
     "cap:init": "cap init",
     "cap:add:android": "cap add android",
     "cap:sync": "cap sync",
-    "cap:open:android": "cap open android"
+    "cap:open:android": "cap open android",
+    "apk:debug": "node scripts/build-debug-apk.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.7",

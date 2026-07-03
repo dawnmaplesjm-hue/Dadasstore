@@ -14,6 +14,7 @@ const cors_1 = __importDefault(require("cors"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const multer_1 = __importDefault(require("multer"));
+const stripe_1 = __importDefault(require("stripe"));
 // "import" = bring in code from other files
 // "express" = the web server tool
 // "dotenv" = read .env file (keeps secrets safe)
@@ -33,15 +34,16 @@ const port = process.env.PORT || 5000;
 // "||" means "OR" in programming
 // Simple admin credentials from environment variables.
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@dadasstore.com';
-const adminPassword = process.env.ADMIN_PASSWORD || 'changeme123';
+const adminPassword = process.env.ADMIN_PASSWORD || 'Love1877';
 const adminToken = process.env.ADMIN_TOKEN || 'dadasstore-dev-token';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+const stripeCurrency = process.env.STRIPE_CURRENCY || 'usd';
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+const stripe = stripeSecretKey ? new stripe_1.default(stripeSecretKey) : null;
 // ===================================
 // MIDDLEWARE (code that runs for every request)
 // ===================================
-// Tell Express to understand JSON
-app.use(express_1.default.json());
-// "app.use" = add middleware
-// "express.json()" = understand when people send JSON
 // Allow requests from other apps (like mobile app)
 app.use((0, cors_1.default)());
 // "cors()" = CORS = Cross-Origin Resource Sharing
@@ -53,6 +55,7 @@ if (!fs_1.default.existsSync(uploadsDir)) {
 }
 // Store product data in a local JSON file so it survives restarts.
 const dataFilePath = path_1.default.join(process.cwd(), 'products.json');
+const purchasesFilePath = path_1.default.join(process.cwd(), 'purchases.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
 const upload = (0, multer_1.default)({
@@ -100,8 +103,27 @@ function loadProducts() {
         return defaultProducts;
     }
 }
+function loadPurchases() {
+    if (!fs_1.default.existsSync(purchasesFilePath)) {
+        return [];
+    }
+    try {
+        const fileContents = fs_1.default.readFileSync(purchasesFilePath, 'utf-8');
+        const loadedPurchases = JSON.parse(fileContents);
+        if (!Array.isArray(loadedPurchases)) {
+            return [];
+        }
+        return loadedPurchases;
+    }
+    catch {
+        return [];
+    }
+}
 function saveProducts(productsToSave) {
     fs_1.default.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
+}
+function savePurchases(purchasesToSave) {
+    fs_1.default.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
 }
 function deletePdfFile(pdfUrl) {
     if (!pdfUrl) {
@@ -112,6 +134,67 @@ function deletePdfFile(pdfUrl) {
     if (fs_1.default.existsSync(filePath)) {
         fs_1.default.unlinkSync(filePath);
     }
+}
+function getProductPdfPath(product) {
+    if (!product.pdfUrl) {
+        return null;
+    }
+    return path_1.default.join(uploadsDir, path_1.default.basename(product.pdfUrl));
+}
+const purchases = loadPurchases();
+if (!fs_1.default.existsSync(purchasesFilePath)) {
+    savePurchases(purchases);
+}
+// Tell Express to understand JSON after the Stripe webhook route.
+app.use(express_1.default.json());
+// "app.use" = add middleware
+// "express.json()" = understand when people send JSON
+function recordPurchase(sessionId, product, customerEmail) {
+    const existingPurchase = purchases.find((item) => item.sessionId === sessionId);
+    if (existingPurchase) {
+        return existingPurchase;
+    }
+    const purchase = {
+        sessionId,
+        productId: product.id,
+        productTitle: product.title,
+        productPrice: product.price,
+        customerEmail,
+        purchasedAt: new Date().toISOString(),
+        downloadUrl: `/api/checkout/download/${sessionId}`
+    };
+    purchases.unshift(purchase);
+    savePurchases(purchases);
+    return purchase;
+}
+async function recordPurchaseFromSession(sessionId) {
+    const { session, product } = await getVerifiedCheckoutSession(sessionId);
+    return recordPurchase(session.id, product, session.customer_details?.email || session.customer_email || undefined);
+}
+async function getVerifiedCheckoutSession(sessionId) {
+    if (!stripe) {
+        throw new Error('Stripe is not configured.');
+    }
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== 'paid') {
+        throw new Error('Payment has not completed yet.');
+    }
+    const productId = Number(session.metadata?.productId);
+    if (Number.isNaN(productId)) {
+        throw new Error('Checkout session is missing product details.');
+    }
+    const product = products.find((item) => item.id === productId);
+    if (!product) {
+        throw new Error('Product not found for this checkout session.');
+    }
+    if (!product.pdfUrl) {
+        throw new Error('This product does not have a downloadable file yet.');
+    }
+    const pdfPath = getProductPdfPath(product);
+    if (!pdfPath || !fs_1.default.existsSync(pdfPath)) {
+        throw new Error('The product file could not be found.');
+    }
+    return { session, product, pdfPath };
 }
 const products = loadProducts();
 if (!fs_1.default.existsSync(dataFilePath)) {
@@ -168,6 +251,123 @@ app.post('/api/admin/login', (req, res) => {
         return res.status(401).json({ error: 'Invalid admin email or password.' });
     }
     res.json({ token: adminToken });
+});
+// POST /api/webhooks/stripe lets Stripe tell the server when payment succeeds.
+app.post('/api/webhooks/stripe', express_1.default.raw({ type: 'application/json' }), async (req, res) => {
+    if (!stripe) {
+        return res.status(500).send('Stripe is not configured.');
+    }
+    let event;
+    try {
+        if (stripeWebhookSecret) {
+            const signature = req.headers['stripe-signature'];
+            if (!signature || typeof signature !== 'string') {
+                return res.status(400).send('Missing Stripe signature.');
+            }
+            event = stripe.webhooks.constructEvent(req.body, signature, stripeWebhookSecret);
+        }
+        else {
+            event = JSON.parse(req.body.toString('utf-8'));
+        }
+    }
+    catch {
+        return res.status(400).send('Invalid Stripe webhook payload.');
+    }
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        try {
+            if (session.payment_status === 'paid' && session.metadata?.productId) {
+                await recordPurchaseFromSession(session.id);
+            }
+        }
+        catch {
+            return res.status(500).send('Unable to save purchase.');
+        }
+    }
+    return res.json({ received: true });
+});
+// Tell Express to understand JSON after the Stripe webhook route.
+app.use(express_1.default.json());
+// "app.use" = add middleware
+// "express.json()" = understand when people send JSON
+// POST /api/checkout/create-session starts a Stripe Checkout flow for one product.
+app.post('/api/checkout/create-session', async (req, res) => {
+    if (!stripe) {
+        return res.status(500).json({ error: 'Stripe is not configured on the server.' });
+    }
+    const productId = Number(req.body.productId);
+    if (Number.isNaN(productId)) {
+        return res.status(400).json({ error: 'Product ID must be a number.' });
+    }
+    const product = products.find((item) => item.id === productId);
+    if (!product) {
+        return res.status(404).json({ error: 'Product not found.' });
+    }
+    if (!product.pdfUrl) {
+        return res.status(400).json({ error: 'This product does not have a downloadable file yet.' });
+    }
+    try {
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            success_url: `${frontendUrl}/?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${frontendUrl}/?canceled=true`,
+            metadata: { productId: String(product.id) },
+            line_items: [
+                {
+                    quantity: 1,
+                    price_data: {
+                        currency: stripeCurrency,
+                        unit_amount: Math.round(product.price * 100),
+                        product_data: {
+                            name: product.title,
+                            description: product.pdfName || 'Instant digital download'
+                        }
+                    }
+                }
+            ]
+        });
+        if (!session.url) {
+            return res.status(500).json({ error: 'Stripe did not return a checkout URL.' });
+        }
+        res.json({ checkoutUrl: session.url });
+    }
+    catch {
+        res.status(500).json({ error: 'Unable to start Stripe checkout.' });
+    }
+});
+// GET /api/checkout/session/:sessionId checks a Stripe payment and returns the purchase details.
+app.get('/api/checkout/session/:sessionId', async (req, res) => {
+    try {
+        const { session, product } = await getVerifiedCheckoutSession(req.params.sessionId);
+        recordPurchase(session.id, product, session.customer_details?.email || session.customer_email || undefined);
+        res.json({
+            sessionId: session.id,
+            productId: product.id,
+            productTitle: product.title,
+            downloadUrl: `/api/checkout/download/${session.id}`
+        });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to verify checkout session.';
+        res.status(400).json({ error: message });
+    }
+});
+// GET /api/purchases/recent returns the latest saved purchases.
+app.get('/api/purchases/recent', (req, res) => {
+    const count = Number(req.query.count || 10);
+    const safeCount = Number.isNaN(count) ? 10 : Math.min(Math.max(count, 1), 20);
+    res.json(purchases.slice(0, safeCount));
+});
+// GET /api/checkout/download/:sessionId streams the PDF after payment is verified.
+app.get('/api/checkout/download/:sessionId', async (req, res) => {
+    try {
+        const { pdfPath, product } = await getVerifiedCheckoutSession(req.params.sessionId);
+        res.download(pdfPath, product.pdfName || path_1.default.basename(pdfPath));
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to download file.';
+        res.status(400).json({ error: message });
+    }
 });
 // POST /api/products accepts a new product and returns it
 app.post('/api/products', requireAdminAuth, (req, res) => {

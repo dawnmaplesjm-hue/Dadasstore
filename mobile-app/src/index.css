@@ -102,6 +102,16 @@ a {
   padding: 24px;
 }
 
+.history-card {
+  margin: 18px 0;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+}
+
 .catalog-header {
   margin-bottom: 18px;
 }
@@ -165,11 +175,15 @@ a {
 .primary-link,
 .secondary-button {
   border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 16px;
   padding: 12px 16px;
   font-weight: 700;
   text-decoration: none;
   transition: transform 0.2s ease;
+  cursor: pointer;
 }
 
 .primary-link {
@@ -182,9 +196,66 @@ a {
   color: #eff6ff;
 }
 
+.primary-link:disabled,
+.secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .primary-link:hover,
 .secondary-button:hover {
   transform: translateY(-1px);
+}
+
+.checkout-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(14, 165, 233, 0.08));
+  border: 1px solid rgba(125, 211, 252, 0.24);
+}
+
+.checkout-card h2 {
+  margin: 6px 0 8px;
+}
+
+.checkout-card p {
+  margin: 0;
+  color: #dbeafe;
+}
+
+.checkout-label {
+  display: inline-block;
+  color: #7dd3fc;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+}
+
+.history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.history-item p {
+  margin: 6px 0 0;
+  color: #b8c4d6;
 }
 
 .message {
@@ -202,12 +273,16 @@ a {
 
 @media (max-width: 900px) {
   .catalog-grid,
-  .feature-strip {
+  .feature-strip,
+  .checkout-card,
+  .history-item {
     grid-template-columns: 1fr;
   }
 
   .product-bottom,
-  .product-top {
+  .product-top,
+  .checkout-card,
+  .history-item {
     flex-direction: column;
     align-items: flex-start;
   }

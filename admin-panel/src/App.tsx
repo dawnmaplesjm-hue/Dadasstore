@@ -253,6 +253,7 @@ export default function App() {
           <section className="panel-card login-card">
             <h2>Admin Login</h2>
             <p className="card-subtitle">Use your admin email and password to unlock product management.</p>
+            <p className="helper-text">Demo login: admin@dadasstore.com / Love1877. Password is case-sensitive.</p>
             <div className="form-grid">
               <input
                 placeholder="Admin email"
@@ -261,7 +262,7 @@ export default function App() {
               />
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="Love1877"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />

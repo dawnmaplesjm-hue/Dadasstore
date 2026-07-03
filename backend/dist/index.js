@@ -47,6 +47,8 @@ const uploadsDir = path_1.default.join(process.cwd(), 'uploads');
 if (!fs_1.default.existsSync(uploadsDir)) {
     fs_1.default.mkdirSync(uploadsDir, { recursive: true });
 }
+// Store product data in a local JSON file so it survives restarts.
+const dataFilePath = path_1.default.join(process.cwd(), 'products.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
 const upload = (0, multer_1.default)({
@@ -66,10 +68,33 @@ const upload = (0, multer_1.default)({
         callback(new Error('Only PDF files are allowed.'));
     }
 });
-const products = [
+const defaultProducts = [
     { id: 1, title: 'Math Ebook', price: 9.99, pdfUrl: '' },
     { id: 2, title: 'Science Worksheet', price: 4.99, pdfUrl: '' }
 ];
+function loadProducts() {
+    if (!fs_1.default.existsSync(dataFilePath)) {
+        return defaultProducts;
+    }
+    try {
+        const fileContents = fs_1.default.readFileSync(dataFilePath, 'utf-8');
+        const loadedProducts = JSON.parse(fileContents);
+        if (!Array.isArray(loadedProducts)) {
+            return defaultProducts;
+        }
+        return loadedProducts;
+    }
+    catch {
+        return defaultProducts;
+    }
+}
+function saveProducts(productsToSave) {
+    fs_1.default.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
+}
+const products = loadProducts();
+if (!fs_1.default.existsSync(dataFilePath)) {
+    saveProducts(products);
+}
 // ===================================
 // ENDPOINTS (doors people can knock on)
 // ===================================
@@ -130,6 +155,7 @@ app.post('/api/products', (req, res) => {
         pdfUrl: ''
     };
     products.push(newProduct);
+    saveProducts(products);
     res.status(201).json(newProduct);
 });
 // POST /api/products/upload accepts a PDF file and saves it with the product
@@ -151,6 +177,7 @@ app.post('/api/products/upload', upload.single('pdf'), (req, res) => {
         pdfName: req.file.originalname
     };
     products.push(newProduct);
+    saveProducts(products);
     res.status(201).json(newProduct);
 });
 // PUT /api/products/:id updates a product by its ID
@@ -170,6 +197,7 @@ app.put('/api/products/:id', (req, res) => {
     if (price && typeof price === 'number') {
         product.price = price;
     }
+    saveProducts(products);
     res.json(product);
 });
 // DELETE /api/products/:id removes a product by its ID
@@ -183,6 +211,7 @@ app.delete('/api/products/:id', (req, res) => {
         return res.status(404).json({ error: 'Product not found.' });
     }
     products.splice(index, 1);
+    saveProducts(products);
     res.json({ message: 'Product deleted successfully.' });
 });
 // ===================================

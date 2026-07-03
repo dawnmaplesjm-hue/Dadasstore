@@ -52,6 +52,9 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Store product data in a local JSON file so it survives restarts.
+const dataFilePath = path.join(process.cwd(), 'products.json');
+
 // Make uploaded files available through a URL.
 app.use('/uploads', express.static(uploadsDir));
 
@@ -84,10 +87,39 @@ type Product = {
   pdfName?: string;
 };
 
-const products: Product[] = [
+const defaultProducts: Product[] = [
   { id: 1, title: 'Math Ebook', price: 9.99, pdfUrl: '' },
   { id: 2, title: 'Science Worksheet', price: 4.99, pdfUrl: '' }
 ];
+
+function loadProducts(): Product[] {
+  if (!fs.existsSync(dataFilePath)) {
+    return defaultProducts;
+  }
+
+  try {
+    const fileContents = fs.readFileSync(dataFilePath, 'utf-8');
+    const loadedProducts = JSON.parse(fileContents) as Product[];
+
+    if (!Array.isArray(loadedProducts)) {
+      return defaultProducts;
+    }
+
+    return loadedProducts;
+  } catch {
+    return defaultProducts;
+  }
+}
+
+function saveProducts(productsToSave: Product[]) {
+  fs.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
+}
+
+const products: Product[] = loadProducts();
+
+if (!fs.existsSync(dataFilePath)) {
+  saveProducts(products);
+}
 
 // ===================================
 // ENDPOINTS (doors people can knock on)
@@ -161,6 +193,7 @@ app.post('/api/products', (req: Request, res: Response) => {
   };
 
   products.push(newProduct);
+  saveProducts(products);
 
   res.status(201).json(newProduct);
 });
@@ -188,6 +221,7 @@ app.post('/api/products/upload', upload.single('pdf'), (req: Request, res: Respo
   };
 
   products.push(newProduct);
+  saveProducts(products);
 
   res.status(201).json(newProduct);
 });
@@ -215,6 +249,8 @@ app.put('/api/products/:id', (req: Request, res: Response) => {
     product.price = price;
   }
 
+  saveProducts(products);
+
   res.json(product);
 });
 
@@ -233,6 +269,7 @@ app.delete('/api/products/:id', (req: Request, res: Response) => {
   }
 
   products.splice(index, 1);
+  saveProducts(products);
 
   res.json({ message: 'Product deleted successfully.' });
 });

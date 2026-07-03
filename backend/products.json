@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "title": "Math Ebook",
+    "price": 9.99,
+    "pdfUrl": ""
+  },
+  {
+    "id": 2,
+    "title": "Science Worksheet",
+    "price": 4.99,
+    "pdfUrl": ""
+  },
+  {
+    "id": 3,
+    "title": "Saved Product",
+    "price": 19.99,
+    "pdfUrl": ""
+  }
+]

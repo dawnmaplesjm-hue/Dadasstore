@@ -79,6 +79,12 @@ a {
   gap: 10px;
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .top-row h1 {
   margin: 2px 0 0;
   font-size: 1.5rem;
@@ -167,6 +173,13 @@ a {
   padding: 8px 12px;
   font-size: 0.78rem;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.chip-active {
+  background: linear-gradient(120deg, #f53fff 0%, #be10ff 100%);
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(190, 16, 255, 0.35);
 }
 
 .status {

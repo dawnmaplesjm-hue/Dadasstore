@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Product = {
   id: number;
@@ -21,6 +21,23 @@ type Purchase = {
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
+const getAdminPanelUrl = () => {
+  if (import.meta.env.VITE_ADMIN_URL) {
+    return import.meta.env.VITE_ADMIN_URL;
+  }
+
+  try {
+    const apiUrl = new URL(configuredApiBaseUrl);
+    apiUrl.port = '5173';
+    apiUrl.pathname = '/';
+    apiUrl.search = '';
+    apiUrl.hash = '';
+    return apiUrl.toString();
+  } catch {
+    return 'http://localhost:5173';
+  }
+};
+
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [recentPurchases, setRecentPurchases] = useState<Purchase[]>([]);
@@ -29,9 +46,12 @@ export default function App() {
   const [checkoutMessage, setCheckoutMessage] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [error, setError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
-  const categoryLabels = ['Ebooks', 'Templates', 'Guides', 'Bundles'];
+  const adminPanelUrl = getAdminPanelUrl();
+  const downloadsSectionRef = useRef<HTMLElement | null>(null);
+  const historySectionRef = useRef<HTMLElement | null>(null);
 
   const getSessionId = () => new URLSearchParams(window.location.search).get('session_id') || '';
 
@@ -145,6 +165,37 @@ export default function App() {
     return 'Ebook';
   };
 
+  const categoryLabels = [
+    'All',
+    ...Array.from(new Set(purchasableProducts.map((product) => getDigitalCategory(product))))
+  ];
+
+  const filteredProducts = selectedCategory === 'All'
+    ? purchasableProducts
+    : purchasableProducts.filter((product) => getDigitalCategory(product) === selectedCategory);
+
+  const showDownloads = () => {
+    downloadsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const showHistory = () => {
+    historySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const cycleCategoryFilter = () => {
+    if (categoryLabels.length === 0) {
+      return;
+    }
+
+    const currentIndex = categoryLabels.indexOf(selectedCategory);
+    const nextIndex = currentIndex === -1 || currentIndex === categoryLabels.length - 1 ? 0 : currentIndex + 1;
+    setSelectedCategory(categoryLabels[nextIndex]);
+  };
+
+  const openAdminPanel = () => {
+    window.open(adminPanelUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="store-shell">
       <main className="store-phone">
@@ -153,24 +204,34 @@ export default function App() {
             <p className="overline">Digital Store</p>
             <h1>Dada Downloads</h1>
           </div>
-          <button className="icon-pill" type="button">Cart</button>
+          <div className="top-actions">
+            <button className="icon-pill" type="button" onClick={openAdminPanel}>Admin</button>
+            <button className="icon-pill" type="button" onClick={showHistory}>History</button>
+          </div>
         </header>
 
         <section className="promo-banner">
           <p className="overline">New Release</p>
           <h2>Premium digital bundle</h2>
           <p>Buy once, download instantly, and access your files anytime.</p>
-          <button className="cta-pill" type="button">Browse downloads</button>
+          <button className="cta-pill" type="button" onClick={showDownloads}>Browse downloads</button>
         </section>
 
         <section className="search-strip">
           <input type="text" readOnly value="Search digital products" aria-label="Search" />
-          <button className="icon-pill" type="button">Filter</button>
+          <button className="icon-pill" type="button" onClick={cycleCategoryFilter}>Filter</button>
         </section>
 
         <section className="chip-row">
           {categoryLabels.map((label) => (
-            <span key={label} className="chip">{label}</span>
+            <button
+              key={label}
+              className={`chip ${selectedCategory === label ? 'chip-active' : ''}`}
+              type="button"
+              onClick={() => setSelectedCategory(label)}
+            >
+              {label}
+            </button>
           ))}
         </section>
 
@@ -203,19 +264,19 @@ export default function App() {
           </article>
         </section>
 
-        <section className="section-card">
+        <section className="section-card" ref={downloadsSectionRef}>
           <div className="section-head">
             <h2>Top Downloads</h2>
-            <span>Ready instantly</span>
+            <span>{selectedCategory === 'All' ? 'Ready instantly' : `${selectedCategory} only`}</span>
           </div>
 
           {loading ? (
             <p className="muted">Loading products...</p>
-          ) : purchasableProducts.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <p className="muted">No products are ready for checkout yet.</p>
           ) : (
             <div className="product-grid">
-              {purchasableProducts.map((product) => (
+              {filteredProducts.map((product) => (
                 <article className="product-card" key={product.id}>
                   <div className="thumb-block" aria-hidden="true">
                     <span className="thumb-file-type">PDF</span>
@@ -261,7 +322,7 @@ export default function App() {
           </section>
         )}
 
-        <section className="section-card">
+        <section className="section-card" ref={historySectionRef}>
           <div className="section-head">
             <h2>Purchase History</h2>
             <span>Saved on server</span>

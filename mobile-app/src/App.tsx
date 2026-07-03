@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Product = {
   id: number;
@@ -73,18 +73,66 @@ export default function App() {
     window.URL.revokeObjectURL(blobUrl);
   };
 
-  useEffect(() => {
-    fetch(`${configuredApiBaseUrl}/api/products`)
-      .then((res) => res.json())
-      .then((data) => setProducts(data))
-      .catch(() => setError('Unable to load products.'))
-      .finally(() => setLoading(false));
+  const loadProducts = useCallback(async () => {
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/products`);
 
-    fetch(`${configuredApiBaseUrl}/api/purchases/recent`)
-      .then((res) => res.json())
-      .then((data) => setRecentPurchases(data))
-      .catch(() => setRecentPurchases([]));
+      if (!response.ok) {
+        throw new Error('Unable to load products.');
+      }
+
+      const data = await response.json();
+      setProducts(data);
+    } catch {
+      setError('Unable to load products.');
+    }
   }, []);
+
+  const loadRecentPurchases = useCallback(async () => {
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/purchases/recent`);
+
+      if (!response.ok) {
+        throw new Error('Unable to load purchases.');
+      }
+
+      const data = await response.json();
+      setRecentPurchases(data);
+    } catch {
+      setRecentPurchases([]);
+    }
+  }, []);
+
+  const refreshStore = useCallback(async () => {
+    setError('');
+    setLoading(true);
+    await Promise.all([loadProducts(), loadRecentPurchases()]);
+    setLoading(false);
+  }, [loadProducts, loadRecentPurchases]);
+
+  useEffect(() => {
+    void refreshStore();
+  }, [refreshStore]);
+
+  useEffect(() => {
+    const onWindowFocus = () => {
+      void refreshStore();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshStore();
+      }
+    };
+
+    window.addEventListener('focus', onWindowFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', onWindowFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [refreshStore]);
 
   useEffect(() => {
     const sessionId = getSessionId();
@@ -207,6 +255,7 @@ export default function App() {
           <div className="top-actions">
             <button className="icon-pill" type="button" onClick={openAdminPanel}>Admin</button>
             <button className="icon-pill" type="button" onClick={showHistory}>History</button>
+            <button className="icon-pill" type="button" onClick={() => void refreshStore()}>Refresh</button>
           </div>
         </header>
 

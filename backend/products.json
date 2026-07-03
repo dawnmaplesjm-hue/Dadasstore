@@ -23,5 +23,12 @@
     "price": 9.99,
     "pdfUrl": "/uploads/1783047184473-UNDERSTANDINGANXIETY.pdf",
     "pdfName": "UNDERSTANDINGANXIETY.pdf"
+  },
+  {
+    "id": 5,
+    "title": "Embrace life",
+    "price": 9.99,
+    "pdfUrl": "/uploads/1783059058127-EMBRACCELIFEREVISED.pdf",
+    "pdfName": "EMBRACCELIFEREVISED.pdf"
   }
 ]

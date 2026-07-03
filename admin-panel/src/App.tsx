@@ -8,6 +8,9 @@ type Product = {
   pdfName?: string;
 };
 
+const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
+
 export default function App() {
   const [authToken, setAuthToken] = useState<string>(() => localStorage.getItem('adminToken') || '');
   const [email, setEmail] = useState('admin@dadasstore.com');
@@ -50,7 +53,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${configuredApiBaseUrl}/api/products`)
       .then((res) => res.json())
       .then(setProducts)
       .catch(() => setError('Unable to load products.'));
@@ -64,7 +67,7 @@ export default function App() {
       return;
     }
 
-    const response = await fetch('http://localhost:5000/api/admin/login', {
+    const response = await fetch(`${configuredApiBaseUrl}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim(), password })
@@ -97,7 +100,7 @@ export default function App() {
     }
 
     const response = pdfFile
-      ? await fetch('http://localhost:5000/api/products/upload', {
+        ? await fetch(`${configuredApiBaseUrl}/api/products/upload`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: (() => {
@@ -108,7 +111,7 @@ export default function App() {
             return formData;
           })()
         })
-      : await fetch('http://localhost:5000/api/products', {
+      : await fetch(`${configuredApiBaseUrl}/api/products`, {
           method: 'POST',
           headers: getJsonAuthHeaders(),
           body: JSON.stringify({ title: title.trim(), price: parsedPrice })
@@ -141,7 +144,7 @@ export default function App() {
       return;
     }
 
-    const response = await fetch(`http://localhost:5000/api/products/${id}`, {
+    const response = await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
@@ -188,7 +191,7 @@ export default function App() {
     }
 
     const response = editPdfFile
-      ? await fetch(`http://localhost:5000/api/products/${id}/upload`, {
+        ? await fetch(`${configuredApiBaseUrl}/api/products/${id}/upload`, {
           method: 'PUT',
           headers: getAuthHeaders(),
           body: (() => {
@@ -199,7 +202,7 @@ export default function App() {
             return formData;
           })()
         })
-      : await fetch(`http://localhost:5000/api/products/${id}`, {
+      : await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
           method: 'PUT',
           headers: getJsonAuthHeaders(),
           body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice })
@@ -355,7 +358,7 @@ export default function App() {
                         </div>
                         <div className="product-actions">
                           {product.pdfUrl && (
-                            <a href={`http://localhost:5000${product.pdfUrl}`} target="_blank" rel="noreferrer" className="pdf-link">
+                            <a href={`${configuredApiBaseUrl}${product.pdfUrl}`} target="_blank" rel="noreferrer" className="pdf-link">
                               Open PDF
                             </a>
                           )}

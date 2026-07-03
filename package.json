@@ -8,11 +8,15 @@
     "mobile-app"
   ],
   "scripts": {
+    "dev": "concurrently -n backend,admin,mobile -c cyan,magenta,green \"npm run dev:backend\" \"npm run dev:admin\" \"npm run dev:mobile\"",
     "dev:backend": "npm run dev --workspace backend",
     "dev:admin": "npm run dev --workspace admin-panel",
     "dev:mobile": "npm run dev --workspace mobile-app",
     "build:backend": "npm run build --workspace backend",
     "build:admin": "npm run build --workspace admin-panel",
     "build:mobile": "npm run build --workspace mobile-app"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
   }
 }

@@ -30,5 +30,12 @@
     "price": 9.99,
     "pdfUrl": "/uploads/1783059058127-EMBRACCELIFEREVISED.pdf",
     "pdfName": "EMBRACCELIFEREVISED.pdf"
+  },
+  {
+    "id": 6,
+    "title": "Embracelife",
+    "price": 9.99,
+    "pdfUrl": "/uploads/1783059784582-EMBRACCELIFEREVISED.pdf",
+    "pdfName": "EMBRACCELIFEREVISED.pdf"
   }
 ]

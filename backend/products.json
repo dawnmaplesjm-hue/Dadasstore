@@ -16,5 +16,12 @@
     "title": "Saved Product",
     "price": 19.99,
     "pdfUrl": ""
+  },
+  {
+    "id": 4,
+    "title": "understanding anxiety",
+    "price": 9.99,
+    "pdfUrl": "/uploads/1783047184473-UNDERSTANDINGANXIETY.pdf",
+    "pdfName": "UNDERSTANDINGANXIETY.pdf"
   }
 ]

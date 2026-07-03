@@ -78,6 +78,15 @@ a {
   margin: 10px 0 0;
 }
 
+.hero-auth {
+  display: flex;
+  align-items: flex-start;
+}
+
+.hero-auth span {
+  color: #b5c1d1;
+}
+
 .hero-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(110px, 1fr));
@@ -124,6 +133,10 @@ a {
   padding: 24px;
 }
 
+.login-card {
+  margin-bottom: 20px;
+}
+
 .form-grid {
   display: grid;
   gap: 14px;
@@ -165,6 +178,13 @@ a {
   transform: translateY(-1px);
 }
 
+.edit-file-picker {
+  min-height: 44px;
+  border-radius: 12px;
+  justify-content: flex-start;
+  padding: 0 12px;
+}
+
 .file-picker input {
   position: absolute;
   inset: 0;
@@ -178,7 +198,9 @@ a {
 }
 
 .primary-button,
-.danger-button {
+.danger-button,
+.save-button,
+.muted-button {
   border: none;
   border-radius: 16px;
   padding: 14px 18px;
@@ -198,8 +220,22 @@ a {
   border: 1px solid rgba(239, 68, 68, 0.28);
 }
 
+.save-button {
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.muted-button {
+  background: rgba(148, 163, 184, 0.14);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
 .primary-button:hover,
-.danger-button:hover {
+.danger-button:hover,
+.save-button:hover,
+.muted-button:hover {
   transform: translateY(-1px);
 }
 
@@ -227,6 +263,26 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+}
+
+.edit-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.edit-input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5eef9;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: rgba(125, 211, 252, 0.75);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
 }
 
 .product-price {

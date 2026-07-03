@@ -31,6 +31,10 @@ const port = process.env.PORT || 5000;
 // "process.env.PORT" = get PORT from .env file
 // "|| 5000" = if no PORT in .env, use 5000 instead
 // "||" means "OR" in programming
+// Simple admin credentials from environment variables.
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@dadasstore.com';
+const adminPassword = process.env.ADMIN_PASSWORD || 'changeme123';
+const adminToken = process.env.ADMIN_TOKEN || 'dadasstore-dev-token';
 // ===================================
 // MIDDLEWARE (code that runs for every request)
 // ===================================
@@ -68,6 +72,14 @@ const upload = (0, multer_1.default)({
         callback(new Error('Only PDF files are allowed.'));
     }
 });
+function requireAdminAuth(req, res, next) {
+    const authHeader = req.headers.authorization;
+    const expectedValue = `Bearer ${adminToken}`;
+    if (!authHeader || authHeader !== expectedValue) {
+        return res.status(401).json({ error: 'Unauthorized. Please login as admin.' });
+    }
+    next();
+}
 const defaultProducts = [
     { id: 1, title: 'Math Ebook', price: 9.99, pdfUrl: '' },
     { id: 2, title: 'Science Worksheet', price: 4.99, pdfUrl: '' }
@@ -90,6 +102,16 @@ function loadProducts() {
 }
 function saveProducts(productsToSave) {
     fs_1.default.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
+}
+function deletePdfFile(pdfUrl) {
+    if (!pdfUrl) {
+        return;
+    }
+    const fileName = path_1.default.basename(pdfUrl);
+    const filePath = path_1.default.join(uploadsDir, fileName);
+    if (fs_1.default.existsSync(filePath)) {
+        fs_1.default.unlinkSync(filePath);
+    }
 }
 const products = loadProducts();
 if (!fs_1.default.existsSync(dataFilePath)) {
@@ -139,8 +161,16 @@ app.get('/api/products/:id', (req, res) => {
     }
     res.json(product);
 });
+// POST /api/admin/login gives a simple token to the admin dashboard.
+app.post('/api/admin/login', (req, res) => {
+    const { email, password } = req.body;
+    if (email !== adminEmail || password !== adminPassword) {
+        return res.status(401).json({ error: 'Invalid admin email or password.' });
+    }
+    res.json({ token: adminToken });
+});
 // POST /api/products accepts a new product and returns it
-app.post('/api/products', (req, res) => {
+app.post('/api/products', requireAdminAuth, (req, res) => {
     const { title, price } = req.body;
     // Basic validation for learning purposes
     if (!title || typeof title !== 'string' || !price || typeof price !== 'number') {
@@ -159,7 +189,7 @@ app.post('/api/products', (req, res) => {
     res.status(201).json(newProduct);
 });
 // POST /api/products/upload accepts a PDF file and saves it with the product
-app.post('/api/products/upload', upload.single('pdf'), (req, res) => {
+app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req, res) => {
     const { title, price } = req.body;
     if (!title || typeof title !== 'string' || !price || Number.isNaN(Number(price))) {
         return res.status(400).json({
@@ -181,7 +211,7 @@ app.post('/api/products/upload', upload.single('pdf'), (req, res) => {
     res.status(201).json(newProduct);
 });
 // PUT /api/products/:id updates a product by its ID
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', requireAdminAuth, (req, res) => {
     const productId = Number(req.params.id);
     const { title, price } = req.body;
     if (Number.isNaN(productId)) {
@@ -200,8 +230,34 @@ app.put('/api/products/:id', (req, res) => {
     saveProducts(products);
     res.json(product);
 });
+// PUT /api/products/:id/upload updates product info and can replace the PDF file
+app.put('/api/products/:id/upload', requireAdminAuth, upload.single('pdf'), (req, res) => {
+    const productId = Number(req.params.id);
+    const { title, price } = req.body;
+    if (Number.isNaN(productId)) {
+        return res.status(400).json({ error: 'Product ID must be a number.' });
+    }
+    const product = products.find((item) => item.id === productId);
+    if (!product) {
+        return res.status(404).json({ error: 'Product not found.' });
+    }
+    if (title && typeof title === 'string') {
+        product.title = title.trim();
+    }
+    if (price && !Number.isNaN(Number(price))) {
+        product.price = Number(price);
+    }
+    if (req.file) {
+        // Replace previous PDF file so the uploads folder stays clean.
+        deletePdfFile(product.pdfUrl);
+        product.pdfUrl = `/uploads/${req.file.filename}`;
+        product.pdfName = req.file.originalname;
+    }
+    saveProducts(products);
+    res.json(product);
+});
 // DELETE /api/products/:id removes a product by its ID
-app.delete('/api/products/:id', (req, res) => {
+app.delete('/api/products/:id', requireAdminAuth, (req, res) => {
     const productId = Number(req.params.id);
     if (Number.isNaN(productId)) {
         return res.status(400).json({ error: 'Product ID must be a number.' });
@@ -210,6 +266,7 @@ app.delete('/api/products/:id', (req, res) => {
     if (index === -1) {
         return res.status(404).json({ error: 'Product not found.' });
     }
+    deletePdfFile(products[index].pdfUrl);
     products.splice(index, 1);
     saveProducts(products);
     res.json({ message: 'Product deleted successfully.' });

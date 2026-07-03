@@ -9,11 +9,45 @@ type Product = {
 };
 
 export default function App() {
+  const [authToken, setAuthToken] = useState<string>(() => localStorage.getItem('adminToken') || '');
+  const [email, setEmail] = useState('admin@dadasstore.com');
+  const [password, setPassword] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+
+  const getAuthHeaders = (): Record<string, string> => {
+    if (!authToken) {
+      return {};
+    }
+
+    return { Authorization: `Bearer ${authToken}` };
+  };
+
+  const getJsonAuthHeaders = (): Record<string, string> => ({
+    'Content-Type': 'application/json',
+    ...getAuthHeaders()
+  });
+
+  const readErrorMessage = async (response: Response, fallbackMessage: string) => {
+    try {
+      const result = await response.json();
+      return result.error || fallbackMessage;
+    } catch {
+      return fallbackMessage;
+    }
+  };
+
+  const clearSession = () => {
+    localStorage.removeItem('adminToken');
+    setAuthToken('');
+  };
 
   useEffect(() => {
     fetch('http://localhost:5000/api/products')
@@ -22,8 +56,39 @@ export default function App() {
       .catch(() => setError('Unable to load products.'));
   }, []);
 
+  const handleLogin = async () => {
+    setError('');
+
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your admin email and password.');
+      return;
+    }
+
+    const response = await fetch('http://localhost:5000/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), password })
+    });
+
+    if (!response.ok) {
+      const message = await readErrorMessage(response, 'Login failed.');
+      setError(message);
+      return;
+    }
+
+    const result = await response.json();
+    localStorage.setItem('adminToken', result.token);
+    setAuthToken(result.token);
+    setPassword('');
+  };
+
   const handleAdd = async () => {
     setError('');
+
+    if (!authToken) {
+      setError('Please login as admin to add products.');
+      return;
+    }
 
     const parsedPrice = Number(price);
     if (!title.trim() || Number.isNaN(parsedPrice)) {
@@ -34,6 +99,7 @@ export default function App() {
     const response = pdfFile
       ? await fetch('http://localhost:5000/api/products/upload', {
           method: 'POST',
+          headers: getAuthHeaders(),
           body: (() => {
             const formData = new FormData();
             formData.append('title', title.trim());
@@ -44,13 +110,16 @@ export default function App() {
         })
       : await fetch('http://localhost:5000/api/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getJsonAuthHeaders(),
           body: JSON.stringify({ title: title.trim(), price: parsedPrice })
         });
 
     if (!response.ok) {
-      const result = await response.json();
-      setError(result.error || 'Unable to add product.');
+      const message = await readErrorMessage(response, 'Unable to add product.');
+      setError(message);
+      if (response.status === 401) {
+        clearSession();
+      }
       return;
     }
 
@@ -62,21 +131,92 @@ export default function App() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!authToken) {
+      setError('Please login as admin to delete products.');
+      return;
+    }
+
     const shouldDelete = window.confirm('Delete this product? This cannot be undone.');
     if (!shouldDelete) {
       return;
     }
 
     const response = await fetch(`http://localhost:5000/api/products/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
 
     if (!response.ok) {
-      setError('Unable to delete product.');
+      const message = await readErrorMessage(response, 'Unable to delete product.');
+      setError(message);
+      if (response.status === 401) {
+        clearSession();
+      }
       return;
     }
 
     setProducts((current) => current.filter((item) => item.id !== id));
+  };
+
+  const startEditing = (product: Product) => {
+    setError('');
+    setEditingId(product.id);
+    setEditTitle(product.title);
+    setEditPrice(String(product.price));
+    setEditPdfFile(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditTitle('');
+    setEditPrice('');
+    setEditPdfFile(null);
+  };
+
+  const saveEditing = async (id: number) => {
+    setError('');
+
+    if (!authToken) {
+      setError('Please login as admin to edit products.');
+      return;
+    }
+
+    const parsedPrice = Number(editPrice);
+    if (!editTitle.trim() || Number.isNaN(parsedPrice)) {
+      setError('Please enter a valid title and price before saving.');
+      return;
+    }
+
+    const response = editPdfFile
+      ? await fetch(`http://localhost:5000/api/products/${id}/upload`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: (() => {
+            const formData = new FormData();
+            formData.append('title', editTitle.trim());
+            formData.append('price', String(parsedPrice));
+            formData.append('pdf', editPdfFile);
+            return formData;
+          })()
+        })
+      : await fetch(`http://localhost:5000/api/products/${id}`, {
+          method: 'PUT',
+          headers: getJsonAuthHeaders(),
+          body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice })
+        });
+
+    if (!response.ok) {
+      const message = await readErrorMessage(response, 'Unable to update product.');
+      setError(message);
+      if (response.status === 401) {
+        clearSession();
+      }
+      return;
+    }
+
+    const updatedProduct = await response.json();
+    setProducts((current) => current.map((product) => (product.id === id ? { ...product, ...updatedProduct } : product)));
+    cancelEditing();
   };
 
   return (
@@ -87,6 +227,13 @@ export default function App() {
             <span className="eyebrow">Admin Dashboard</span>
             <h1>Dada's Store</h1>
             <p>Add products, upload PDFs, and manage the catalog from one place.</p>
+          </div>
+          <div className="hero-auth">
+            {authToken ? (
+              <button className="muted-button" onClick={clearSession}>Logout</button>
+            ) : (
+              <span>Login required for edits</span>
+            )}
           </div>
           <div className="hero-stats">
             <div>
@@ -101,6 +248,27 @@ export default function App() {
         </section>
 
         {error && <div className="error-banner">{error}</div>}
+
+        {!authToken && (
+          <section className="panel-card login-card">
+            <h2>Admin Login</h2>
+            <p className="card-subtitle">Use your admin email and password to unlock product management.</p>
+            <div className="form-grid">
+              <input
+                placeholder="Admin email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button className="primary-button" onClick={handleLogin}>Login</button>
+            </div>
+          </section>
+        )}
 
         <section className="content-grid">
           <div className="panel-card form-card">
@@ -147,22 +315,58 @@ export default function App() {
               <ul className="product-list">
                 {products.map((product) => (
                   <li key={product.id} className="product-card">
-                    <div className="product-main">
-                      <div>
-                        <strong>{product.title}</strong>
-                        <div className="product-price">${product.price.toFixed(2)}</div>
+                    {editingId === product.id ? (
+                      <div className="edit-grid">
+                        <input
+                          className="edit-input"
+                          value={editTitle}
+                          onChange={(event) => setEditTitle(event.target.value)}
+                          placeholder="Product title"
+                        />
+                        <input
+                          className="edit-input"
+                          value={editPrice}
+                          onChange={(event) => setEditPrice(event.target.value)}
+                          placeholder="Price"
+                        />
+                        <label className="file-picker edit-file-picker">
+                          <span>{editPdfFile ? editPdfFile.name : 'Replace PDF (optional)'}</span>
+                          <input
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            onChange={(event) => setEditPdfFile(event.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                        <div className="product-actions">
+                          <button className="save-button" onClick={() => saveEditing(product.id)}>
+                            Save
+                          </button>
+                          <button className="muted-button" onClick={cancelEditing}>
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                      <div className="product-actions">
-                        {product.pdfUrl && (
-                          <a href={`http://localhost:5000${product.pdfUrl}`} target="_blank" rel="noreferrer" className="pdf-link">
-                            Open PDF
-                          </a>
-                        )}
-                        <button className="danger-button" onClick={() => handleDelete(product.id)}>
-                          Delete
-                        </button>
+                    ) : (
+                      <div className="product-main">
+                        <div>
+                          <strong>{product.title}</strong>
+                          <div className="product-price">${product.price.toFixed(2)}</div>
+                        </div>
+                        <div className="product-actions">
+                          {product.pdfUrl && (
+                            <a href={`http://localhost:5000${product.pdfUrl}`} target="_blank" rel="noreferrer" className="pdf-link">
+                              Open PDF
+                            </a>
+                          )}
+                          <button className="muted-button" onClick={() => startEditing(product)}>
+                            Edit
+                          </button>
+                          <button className="danger-button" onClick={() => handleDelete(product.id)}>
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </li>
                 ))}
               </ul>

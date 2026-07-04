@@ -1,41 +1,9 @@
 [
   {
     "id": 1,
-    "title": "Math Ebook",
+    "title": "Embrace",
     "price": 9.99,
-    "pdfUrl": ""
-  },
-  {
-    "id": 2,
-    "title": "Science Worksheet",
-    "price": 4.99,
-    "pdfUrl": ""
-  },
-  {
-    "id": 3,
-    "title": "Saved Product",
-    "price": 19.99,
-    "pdfUrl": ""
-  },
-  {
-    "id": 4,
-    "title": "understanding anxiety",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783047184473-UNDERSTANDINGANXIETY.pdf",
-    "pdfName": "UNDERSTANDINGANXIETY.pdf"
-  },
-  {
-    "id": 5,
-    "title": "Embrace life",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783059058127-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 6,
-    "title": "Embracelife",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783059784582-EMBRACCELIFEREVISED.pdf",
+    "pdfUrl": "/uploads/1783132139833-EMBRACCELIFEREVISED.pdf",
     "pdfName": "EMBRACCELIFEREVISED.pdf"
   }
 ]

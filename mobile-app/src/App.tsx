@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 type Product = {
   id: number;
@@ -22,14 +23,25 @@ const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:500
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
 const getApiBaseCandidates = () => {
-  const candidates = [
+  const androidCandidates = [
+    'http://10.0.2.2:5000',
+    'http://10.0.2.2:5000',
     import.meta.env.VITE_API_BASE_URL,
     configuredApiBaseUrl,
     `${window.location.protocol}//${window.location.hostname}:5000`,
-    'http://10.0.2.2:5000',
     'http://localhost:5000',
     'http://127.0.0.1:5000'
   ].filter((value): value is string => Boolean(value));
+
+  const webCandidates = [
+    import.meta.env.VITE_API_BASE_URL,
+    configuredApiBaseUrl,
+    `${window.location.protocol}//${window.location.hostname}:5000`,
+    'http://localhost:5000',
+    'http://127.0.0.1:5000'
+  ].filter((value): value is string => Boolean(value));
+
+  const candidates = Capacitor.getPlatform() === 'android' ? androidCandidates : webCandidates;
 
   return Array.from(new Set(candidates));
 };

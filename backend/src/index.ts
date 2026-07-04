@@ -643,6 +643,22 @@ app.delete('/api/products/:id', requireAdminAuth, (req: Request, res: Response) 
   res.json({ message: 'Product deleted successfully.' });
 });
 
+// Convert common upload/runtime errors into JSON so the admin UI can show clear messages.
+app.use((error: unknown, _req: Request, res: Response, _next: express.NextFunction) => {
+  if (error instanceof multer.MulterError) {
+    const uploadMessage = error.code === 'LIMIT_UNEXPECTED_FILE'
+      ? `Unexpected file field: ${error.field || 'unknown'}`
+      : `Upload error: ${error.message}`;
+    return res.status(400).json({ error: uploadMessage });
+  }
+
+  if (error instanceof Error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.status(500).json({ error: 'Unexpected server error.' });
+});
+
 // ===================================
 // START THE SERVER
 // ===================================

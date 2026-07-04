@@ -12,5 +12,22 @@
     "price": 9,
     "pdfUrl": "/uploads/1783135515141-EMBRACCELIFEREVISED.pdf",
     "pdfName": "EMBRACCELIFEREVISED.pdf"
+  },
+  {
+    "id": 3,
+    "title": "Auth Check",
+    "price": 1.23,
+    "description": "",
+    "pdfUrl": ""
+  },
+  {
+    "id": 4,
+    "title": "Coping",
+    "price": 9,
+    "description": "Coping",
+    "pdfUrl": "/uploads/1783138315117-COPINGSKILLSREVISED.pdf",
+    "pdfName": "COPINGSKILLSREVISED.pdf",
+    "imageUrl": "/uploads/1783138335588-1000013819.png",
+    "imageName": "1000013819.png"
   }
 ]

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dada Downloads | Instant Digital Products</title>
+    <meta
+      name="description"
+      content="Get instant digital downloads from Dada Downloads. Buy once, download now, and access your files anytime."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-wrap">
+      <header class="topbar reveal">
+        <div class="brand">Dada<span>Downloads</span></div>
+        <nav class="top-links" aria-label="Quick links">
+          <a class="pill-link" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">Open Store</a>
+          <a class="pill-link" href="#how-it-works">How It Works</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <article class="hero-copy reveal delay-1">
+          <p class="kicker">Instant Access Marketplace</p>
+          <h1>
+            Download premium digital products
+            <span class="shine">in minutes.</span>
+          </h1>
+          <p>
+            Dada Downloads gives creators and customers a clean, fast way to buy and receive digital files.
+            No app store needed. No waiting. Just secure checkout and instant delivery.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">
+              Shop Digital Products
+            </a>
+            <a class="btn btn-secondary" href="#products">See What You Get</a>
+          </div>
+          <div class="hero-note">Tip: Mobile users can add the store to their home screen for an app-like experience.</div>
+        </article>
+
+        <aside class="hero-panel reveal delay-2" aria-label="Store highlights">
+          <div class="stat">
+            <strong>Instant</strong>
+            <span>File delivery after checkout</span>
+          </div>
+          <div class="stat">
+            <strong>Secure</strong>
+            <span>Stripe-powered payment flow</span>
+          </div>
+          <div class="stat">
+            <strong>Mobile Ready</strong>
+            <span>Built for phone and desktop browsing</span>
+          </div>
+        </aside>
+      </section>
+
+      <section id="products" class="section reveal delay-2">
+        <h2>What You Will Find</h2>
+        <p>Products are designed for classroom support, fast prep, and immediate use.</p>
+        <div class="card-grid">
+          <article class="card">
+            <h3>Lesson Plans</h3>
+            <p>Ready-to-teach plans you can use as-is or adapt for your classroom.</p>
+          </article>
+          <article class="card">
+            <h3>Worksheets</h3>
+            <p>Print-ready and digital worksheets built for engaging, focused practice.</p>
+          </article>
+          <article class="card">
+            <h3>Ebooks and Bundles</h3>
+            <p>Value-packed ebooks and bundled resources organized by topic and level.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="section reveal delay-3">
+        <h2>How It Works</h2>
+        <p>Simple flow from discovery to instant access.</p>
+        <div class="steps">
+          <article class="step">
+            <div class="num">1</div>
+            <h3>Pick Your Product</h3>
+            <p>Browse the storefront and choose the digital item you need.</p>
+          </article>
+          <article class="step">
+            <div class="num">2</div>
+            <h3>Checkout Securely</h3>
+            <p>Complete payment through Stripe in a trusted flow.</p>
+          </article>
+          <article class="step">
+            <div class="num">3</div>
+            <h3>Download Immediately</h3>
+            <p>Land on the success page and tap Download now.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta reveal delay-3">
+        <h2>Ready to get started?</h2>
+        <p>Open the live store now and get instant access to your first digital product.</p>
+        <a class="btn btn-primary" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">
+          Go To Dada Downloads
+        </a>
+      </section>
+
+      <footer class="footer">
+        <p>&copy; <span id="year"></span> Dada Downloads. All rights reserved.</p>
+      </footer>
+    </div>
+
+    <script>
+      const yearEl = document.getElementById('year');
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear().toString();
+      }
+    </script>
+  </body>
+</html>

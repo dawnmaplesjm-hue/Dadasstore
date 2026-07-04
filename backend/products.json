@@ -96,5 +96,12 @@
     "price": 9.99,
     "pdfUrl": "/uploads/1783134888392-EMBRACCELIFEREVISED.pdf",
     "pdfName": "EMBRACCELIFEREVISED.pdf"
+  },
+  {
+    "id": 15,
+    "title": "Upload API Test",
+    "price": 5.55,
+    "pdfUrl": "/uploads/1783135079863-1783132139833-EMBRACCELIFEREVISED.pdf",
+    "pdfName": "1783132139833-EMBRACCELIFEREVISED.pdf"
   }
 ]

@@ -67,22 +67,26 @@ export default function App() {
       return;
     }
 
-    const response = await fetch(`${configuredApiBaseUrl}/api/admin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), password })
-    });
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password })
+      });
 
-    if (!response.ok) {
-      const message = await readErrorMessage(response, 'Login failed.');
-      setError(message);
-      return;
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Login failed.');
+        setError(message);
+        return;
+      }
+
+      const result = await response.json();
+      localStorage.setItem('adminToken', result.token);
+      setAuthToken(result.token);
+      setPassword('');
+    } catch {
+      setError('Unable to reach the server. Please check your backend URL and network.');
     }
-
-    const result = await response.json();
-    localStorage.setItem('adminToken', result.token);
-    setAuthToken(result.token);
-    setPassword('');
   };
 
   const handleAdd = async () => {
@@ -99,38 +103,42 @@ export default function App() {
       return;
     }
 
-    const response = pdfFile
-        ? await fetch(`${configuredApiBaseUrl}/api/products/upload`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: (() => {
-            const formData = new FormData();
-            formData.append('title', title.trim());
-            formData.append('price', String(parsedPrice));
-            formData.append('pdf', pdfFile);
-            return formData;
-          })()
-        })
-      : await fetch(`${configuredApiBaseUrl}/api/products`, {
-          method: 'POST',
-          headers: getJsonAuthHeaders(),
-          body: JSON.stringify({ title: title.trim(), price: parsedPrice })
-        });
+    try {
+      const response = pdfFile
+          ? await fetch(`${configuredApiBaseUrl}/api/products/upload`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: (() => {
+              const formData = new FormData();
+              formData.append('title', title.trim());
+              formData.append('price', String(parsedPrice));
+              formData.append('pdf', pdfFile);
+              return formData;
+            })()
+          })
+        : await fetch(`${configuredApiBaseUrl}/api/products`, {
+            method: 'POST',
+            headers: getJsonAuthHeaders(),
+            body: JSON.stringify({ title: title.trim(), price: parsedPrice })
+          });
 
-    if (!response.ok) {
-      const message = await readErrorMessage(response, 'Unable to add product.');
-      setError(message);
-      if (response.status === 401) {
-        clearSession();
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to add product.');
+        setError(message);
+        if (response.status === 401) {
+          clearSession();
+        }
+        return;
       }
-      return;
-    }
 
-    const newProduct = await response.json();
-    setProducts((current) => [...current, newProduct]);
-    setTitle('');
-    setPrice('');
-    setPdfFile(null);
+      const newProduct = await response.json();
+      setProducts((current) => [...current, newProduct]);
+      setTitle('');
+      setPrice('');
+      setPdfFile(null);
+    } catch {
+      setError('Unable to reach the server. Please check your backend URL and network.');
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -144,21 +152,25 @@ export default function App() {
       return;
     }
 
-    const response = await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
 
-    if (!response.ok) {
-      const message = await readErrorMessage(response, 'Unable to delete product.');
-      setError(message);
-      if (response.status === 401) {
-        clearSession();
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to delete product.');
+        setError(message);
+        if (response.status === 401) {
+          clearSession();
+        }
+        return;
       }
-      return;
-    }
 
-    setProducts((current) => current.filter((item) => item.id !== id));
+      setProducts((current) => current.filter((item) => item.id !== id));
+    } catch {
+      setError('Unable to reach the server. Please check your backend URL and network.');
+    }
   };
 
   const startEditing = (product: Product) => {
@@ -190,36 +202,40 @@ export default function App() {
       return;
     }
 
-    const response = editPdfFile
-        ? await fetch(`${configuredApiBaseUrl}/api/products/${id}/upload`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: (() => {
-            const formData = new FormData();
-            formData.append('title', editTitle.trim());
-            formData.append('price', String(parsedPrice));
-            formData.append('pdf', editPdfFile);
-            return formData;
-          })()
-        })
-      : await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
-          method: 'PUT',
-          headers: getJsonAuthHeaders(),
-          body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice })
-        });
+    try {
+      const response = editPdfFile
+          ? await fetch(`${configuredApiBaseUrl}/api/products/${id}/upload`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: (() => {
+              const formData = new FormData();
+              formData.append('title', editTitle.trim());
+              formData.append('price', String(parsedPrice));
+              formData.append('pdf', editPdfFile);
+              return formData;
+            })()
+          })
+        : await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
+            method: 'PUT',
+            headers: getJsonAuthHeaders(),
+            body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice })
+          });
 
-    if (!response.ok) {
-      const message = await readErrorMessage(response, 'Unable to update product.');
-      setError(message);
-      if (response.status === 401) {
-        clearSession();
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to update product.');
+        setError(message);
+        if (response.status === 401) {
+          clearSession();
+        }
+        return;
       }
-      return;
-    }
 
-    const updatedProduct = await response.json();
-    setProducts((current) => current.map((product) => (product.id === id ? { ...product, ...updatedProduct } : product)));
-    cancelEditing();
+      const updatedProduct = await response.json();
+      setProducts((current) => current.map((product) => (product.id === id ? { ...product, ...updatedProduct } : product)));
+      cancelEditing();
+    } catch {
+      setError('Unable to reach the server. Please check your backend URL and network.');
+    }
   };
 
   return (

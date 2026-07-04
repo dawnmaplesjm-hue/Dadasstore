@@ -3,18 +3,19 @@
 }
 
 :root {
-  color: #e5eef9;
+  color: #f8f5ff;
   background:
-    radial-gradient(circle at top left, rgba(69, 104, 220, 0.45), transparent 28%),
-    radial-gradient(circle at top right, rgba(32, 178, 170, 0.24), transparent 24%),
-    linear-gradient(180deg, #07111f 0%, #0b1728 100%);
+    radial-gradient(circle at 24% 18%, rgba(164, 42, 216, 0.28), transparent 34%),
+    radial-gradient(circle at 82% 78%, rgba(39, 128, 255, 0.24), transparent 30%),
+    linear-gradient(180deg, #180026 0%, #2b0453 48%, #08345a 100%);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  color: #e5eef9;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #f8f5ff;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  line-height: 1.45;
 }
 
 button,
@@ -38,9 +39,9 @@ a {
 
 .hero-card,
 .panel-card {
-  background: rgba(7, 17, 31, 0.78);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+  background: linear-gradient(180deg, rgba(28, 2, 54, 0.92), rgba(12, 53, 95, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 22px 64px rgba(7, 5, 18, 0.55);
   backdrop-filter: blur(18px);
 }
 
@@ -53,10 +54,14 @@ a {
   margin-bottom: 20px;
 }
 
+.hero-card h1 {
+  letter-spacing: 0.01em;
+}
+
 .eyebrow {
   display: inline-block;
   margin-bottom: 8px;
-  color: #7dd3fc;
+  color: rgba(247, 183, 50, 0.9);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -74,7 +79,7 @@ a {
 
 .hero-card p,
 .card-subtitle {
-  color: #b5c1d1;
+  color: rgba(236, 224, 255, 0.84);
   margin: 10px 0 0;
 }
 
@@ -84,7 +89,7 @@ a {
 }
 
 .hero-auth span {
-  color: #b5c1d1;
+  color: rgba(236, 224, 255, 0.84);
 }
 
 .hero-stats {
@@ -98,8 +103,8 @@ a {
   min-width: 120px;
   padding: 16px;
   border-radius: 18px;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .hero-stats strong {
@@ -109,7 +114,7 @@ a {
 }
 
 .hero-stats span {
-  color: #b5c1d1;
+  color: rgba(236, 224, 255, 0.8);
   font-size: 0.92rem;
 }
 
@@ -139,11 +144,17 @@ a {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 20px;
+  align-items: start;
 }
 
 .panel-card {
   border-radius: 24px;
   padding: 24px;
+}
+
+.panel-card h2 {
+  font-size: 2rem;
+  line-height: 1.1;
 }
 
 .login-card {
@@ -156,35 +167,39 @@ a {
   margin-top: 18px;
 }
 
+.form-card .form-grid {
+  gap: 12px;
+}
+
 .form-grid input {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 16px;
   padding: 14px 16px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5eef9;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8f5ff;
   outline: none;
 }
 
 .form-grid textarea {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 16px;
   padding: 14px 16px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5eef9;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8f5ff;
   outline: none;
   resize: vertical;
 }
 
 .form-grid input:focus {
-  border-color: rgba(125, 211, 252, 0.75);
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+  border-color: rgba(247, 183, 50, 0.72);
+  box-shadow: 0 0 0 4px rgba(247, 183, 50, 0.14);
 }
 
 .form-grid textarea:focus {
-  border-color: rgba(125, 211, 252, 0.75);
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+  border-color: rgba(247, 183, 50, 0.72);
+  box-shadow: 0 0 0 4px rgba(247, 183, 50, 0.14);
 }
 
 .file-picker {
@@ -193,17 +208,17 @@ a {
   align-items: center;
   justify-content: center;
   min-height: 52px;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border: 1px dashed rgba(255, 255, 255, 0.28);
   border-radius: 16px;
   padding: 0 16px;
-  background: rgba(15, 23, 42, 0.7);
-  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(248, 241, 255, 0.9);
   cursor: pointer;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .file-picker:hover {
-  border-color: rgba(125, 211, 252, 0.75);
+  border-color: rgba(247, 183, 50, 0.75);
   transform: translateY(-1px);
 }
 
@@ -228,7 +243,7 @@ a {
 }
 
 .helper-text {
-  color: #94a3b8;
+  color: rgba(236, 224, 255, 0.72);
   margin-top: -4px;
 }
 
@@ -242,13 +257,14 @@ a {
   border-radius: 16px;
   padding: 14px 18px;
   font-weight: 700;
+  min-height: 48px;
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .primary-button {
-  background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+  background: linear-gradient(120deg, #f53fff 0%, #be10ff 100%);
   color: white;
-  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.22);
+  box-shadow: 0 10px 24px rgba(190, 16, 255, 0.38);
 }
 
 .danger-button {
@@ -264,9 +280,9 @@ a {
 }
 
 .muted-button {
-  background: rgba(148, 163, 184, 0.14);
-  color: #e2e8f0;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8f5ff;
+  border: 1px solid rgba(255, 255, 255, 0.26);
 }
 
 .primary-button:hover,
@@ -280,6 +296,10 @@ a {
   margin-bottom: 16px;
 }
 
+.list-header h2 {
+  margin-bottom: 4px;
+}
+
 .product-list {
   list-style: none;
   padding: 0;
@@ -289,10 +309,10 @@ a {
 }
 
 .product-card {
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .product-main {
@@ -302,6 +322,10 @@ a {
   gap: 18px;
 }
 
+.product-main strong {
+  font-size: 1.05rem;
+}
+
 .edit-grid {
   display: grid;
   gap: 10px;
@@ -309,17 +333,17 @@ a {
 
 .edit-input {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5eef9;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8f5ff;
 }
 
 .edit-input:focus {
   outline: none;
-  border-color: rgba(125, 211, 252, 0.75);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+  border-color: rgba(247, 183, 50, 0.72);
+  box-shadow: 0 0 0 3px rgba(247, 183, 50, 0.14);
 }
 
 .edit-textarea {
@@ -329,13 +353,13 @@ a {
 
 .product-price {
   margin-top: 4px;
-  color: #7dd3fc;
+  color: #f7b732;
   font-weight: 700;
 }
 
 .product-description {
   margin: 6px 0 0;
-  color: #b5c1d1;
+  color: rgba(236, 224, 255, 0.84);
   font-size: 0.9rem;
 }
 
@@ -355,17 +379,22 @@ a {
   flex-wrap: wrap;
 }
 
+.product-actions button,
+.product-actions .pdf-link {
+  min-height: 40px;
+}
+
 .pdf-link {
   text-decoration: none;
-  color: #dbeafe;
-  border: 1px solid rgba(125, 211, 252, 0.2);
-  background: rgba(56, 189, 248, 0.08);
+  color: #f8f5ff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
   padding: 10px 14px;
   border-radius: 14px;
 }
 
 .empty-state {
-  color: #94a3b8;
+  color: rgba(236, 224, 255, 0.72);
   margin: 0;
 }
 
@@ -390,6 +419,46 @@ a {
   .hero-card,
   .panel-card {
     padding: 18px;
+  }
+
+  .hero-card {
+    gap: 16px;
+  }
+
+  .hero-card h1 {
+    font-size: 2rem;
+    line-height: 1.05;
+  }
+
+  .panel-card h2 {
+    font-size: 1.9rem;
+  }
+
+  .card-subtitle {
+    font-size: 1.08rem;
+  }
+
+  .helper-text {
+    font-size: 0.98rem;
+    line-height: 1.4;
+  }
+
+  .form-grid input,
+  .form-grid textarea {
+    font-size: 1.12rem;
+    padding: 15px 16px;
+  }
+
+  .primary-button,
+  .danger-button,
+  .save-button,
+  .muted-button {
+    font-size: 1.12rem;
+    min-height: 52px;
+  }
+
+  .product-card {
+    padding: 14px;
   }
 
   .hero-stats {

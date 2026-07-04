@@ -100,6 +100,7 @@ export default function App() {
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
   const adminPanelUrl = getAdminPanelUrl();
+  const refreshIntervalMs = 5000;
 
   const getSessionId = () => new URLSearchParams(window.location.search).get('session_id') || '';
 
@@ -160,6 +161,16 @@ export default function App() {
     return () => {
       window.removeEventListener('focus', onWindowFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [refreshStore]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void refreshStore();
+    }, refreshIntervalMs);
+
+    return () => {
+      window.clearInterval(intervalId);
     };
   }, [refreshStore]);
 

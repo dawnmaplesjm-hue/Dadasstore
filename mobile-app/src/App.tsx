@@ -115,7 +115,6 @@ export default function App() {
 
   const refreshStore = useCallback(async () => {
     setError('');
-    setLoading(true);
     await Promise.all([
       loadProducts(),
       fetchFromApi('/api/store-settings')
@@ -265,7 +264,7 @@ export default function App() {
           <section className="success-card">
             <p className="success-label">Your purchase is ready</p>
             <h2>{purchaseResult.productTitle}</h2>
-            <p>Tap the button below to download your file now. The store will stay out of the way.</p>
+            <p>Thank you for your purchase. Tap the button to download your file now.</p>
             <div className="success-actions">
               <a className="buy-button success-download" href={purchaseResult.downloadUrl}>
                 Download now

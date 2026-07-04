@@ -56,15 +56,20 @@ app.use(cors());
 
 // Store uploaded PDF files in a local folder.
 const backendRootDir = path.resolve(__dirname, '..');
-const uploadsDir = path.join(backendRootDir, 'uploads');
+const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : backendRootDir;
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Store product data in a local JSON file so it survives restarts.
-const dataFilePath = path.join(backendRootDir, 'products.json');
-const purchasesFilePath = path.join(backendRootDir, 'purchases.json');
-const storeSettingsFilePath = path.join(backendRootDir, 'store-settings.json');
+const dataFilePath = path.join(dataDir, 'products.json');
+const purchasesFilePath = path.join(dataDir, 'purchases.json');
+const storeSettingsFilePath = path.join(dataDir, 'store-settings.json');
 
 // Make uploaded files available through a URL.
 app.use('/uploads', express.static(uploadsDir));

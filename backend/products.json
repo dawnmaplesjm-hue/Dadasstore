@@ -1,103 +1,5 @@
 [
   {
-    "id": 1,
-    "title": "Embrace",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783132139833-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 2,
-    "title": "Understanding anxiety",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783132779957-UNDERSTANDINGANXIETY.pdf",
-    "pdfName": "UNDERSTANDINGANXIETY.pdf"
-  },
-  {
-    "id": 3,
-    "title": "Embrace",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783133160620-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 4,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783133472271-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 5,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783134332611-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 6,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783134334198-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 7,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134852195-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 8,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134853869-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 9,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134854543-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 10,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134854701-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 11,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134854869-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 12,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134854310-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 13,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134894657-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 14,
-    "title": "Em",
-    "price": 9.99,
-    "pdfUrl": "/uploads/1783134888392-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
     "id": 15,
     "title": "Upload API Test",
     "price": 5.55,
@@ -105,52 +7,10 @@
     "pdfName": "1783132139833-EMBRACCELIFEREVISED.pdf"
   },
   {
-    "id": 16,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783135288189-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 17,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783135512861-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
     "id": 18,
     "title": "Em",
     "price": 9,
     "pdfUrl": "/uploads/1783135515141-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 19,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783135516445-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 20,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783135517026-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 21,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783135517026-EMBRACCELIFEREVISED.pdf",
-    "pdfName": "EMBRACCELIFEREVISED.pdf"
-  },
-  {
-    "id": 22,
-    "title": "Em",
-    "price": 9,
-    "pdfUrl": "/uploads/1783136363101-EMBRACCELIFEREVISED.pdf",
     "pdfName": "EMBRACCELIFEREVISED.pdf"
   }
 ]

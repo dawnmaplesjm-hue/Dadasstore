@@ -21,6 +21,11 @@ type Purchase = {
   downloadUrl: string;
 };
 
+type StoreSettings = {
+  newReleaseTitle: string;
+  newReleaseMessage: string;
+};
+
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
@@ -56,12 +61,17 @@ const getAdminPanelUrl = () => {
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
+    newReleaseTitle: 'Premium digital bundle',
+    newReleaseMessage: 'Buy once, download instantly, and access your files anytime.'
+  });
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
@@ -102,7 +112,20 @@ export default function App() {
   const refreshStore = useCallback(async () => {
     setError('');
     setLoading(true);
-    await loadProducts();
+    await Promise.all([
+      loadProducts(),
+      fetchFromApi('/api/store-settings')
+        .then((response) => response.json())
+        .then((settings: StoreSettings) => {
+          setStoreSettings({
+            newReleaseTitle: settings.newReleaseTitle || 'Premium digital bundle',
+            newReleaseMessage: settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.'
+          });
+        })
+        .catch(() => {
+          // Keep default settings if this call fails.
+        })
+    ]);
     setLoading(false);
   }, [loadProducts]);
 
@@ -239,8 +262,8 @@ export default function App() {
 
         <section className="promo-banner">
           <p className="overline">New Release</p>
-          <h2>Premium digital bundle</h2>
-          <p>Buy once, download instantly, and access your files anytime.</p>
+          <h2>{storeSettings.newReleaseTitle}</h2>
+          <p>{storeSettings.newReleaseMessage}</p>
         </section>
 
         <section className="search-strip">
@@ -268,17 +291,26 @@ export default function App() {
         )}
 
         <section className="stats-grid">
-          <article>
+          <button
+            type="button"
+            className={`stat-button ${activeList === 'buy' ? 'stat-active' : ''}`}
+            onClick={() => setActiveList('buy')}
+          >
             <strong>{purchasableProducts.length}</strong>
             <span>Buy now</span>
-          </article>
-          <article>
+          </button>
+          <button
+            type="button"
+            className={`stat-button ${activeList === 'soon' ? 'stat-active' : ''}`}
+            onClick={() => setActiveList('soon')}
+          >
             <strong>{comingSoonProducts.length}</strong>
             <span>Coming soon</span>
-          </article>
+          </button>
         </section>
 
-        <section className="section-card">
+        {activeList === 'buy' && (
+          <section className="section-card">
           <div className="section-head">
             <h2>Buy Now</h2>
             <span>{filteredProducts.length} ready now</span>
@@ -343,9 +375,10 @@ export default function App() {
               ))}
             </div>
           )}
-        </section>
+          </section>
+        )}
 
-        {comingSoonProducts.length > 0 && (
+        {activeList === 'soon' && comingSoonProducts.length > 0 && (
           <section className="section-card">
             <div className="section-head">
               <h2>Coming Soon</h2>
@@ -362,6 +395,16 @@ export default function App() {
                 </article>
               ))}
             </div>
+          </section>
+        )}
+
+        {activeList === 'soon' && comingSoonProducts.length === 0 && (
+          <section className="section-card">
+            <div className="section-head">
+              <h2>Coming Soon</h2>
+              <span>No upcoming products</span>
+            </div>
+            <p className="muted">There are no coming-soon items right now.</p>
           </section>
         )}
 

@@ -210,6 +210,20 @@ a {
   padding: 12px;
 }
 
+.stat-button {
+  text-align: left;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 12px;
+  color: inherit;
+}
+
+.stat-active {
+  border-color: rgba(247, 183, 50, 0.6);
+  box-shadow: 0 0 0 2px rgba(247, 183, 50, 0.2) inset;
+}
+
 .stats-grid strong {
   display: block;
   font-size: 1.1rem;

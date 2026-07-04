@@ -57,6 +57,7 @@ if (!fs_1.default.existsSync(uploadsDir)) {
 // Store product data in a local JSON file so it survives restarts.
 const dataFilePath = path_1.default.join(backendRootDir, 'products.json');
 const purchasesFilePath = path_1.default.join(backendRootDir, 'purchases.json');
+const storeSettingsFilePath = path_1.default.join(backendRootDir, 'store-settings.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
 const upload = (0, multer_1.default)({
@@ -94,6 +95,10 @@ const defaultProducts = [
     { id: 1, title: 'Math Ebook', price: 9.99, description: 'A beginner-friendly math ebook.', pdfUrl: '' },
     { id: 2, title: 'Science Worksheet', price: 4.99, description: 'Printable science worksheet for learners.', pdfUrl: '' }
 ];
+const defaultStoreSettings = {
+    newReleaseTitle: 'Premium digital bundle',
+    newReleaseMessage: 'Buy once, download instantly, and access your files anytime.'
+};
 function loadProducts() {
     if (!fs_1.default.existsSync(dataFilePath)) {
         return defaultProducts;
@@ -126,11 +131,34 @@ function loadPurchases() {
         return [];
     }
 }
+function loadStoreSettings() {
+    if (!fs_1.default.existsSync(storeSettingsFilePath)) {
+        return defaultStoreSettings;
+    }
+    try {
+        const fileContents = fs_1.default.readFileSync(storeSettingsFilePath, 'utf-8');
+        const loadedSettings = JSON.parse(fileContents);
+        return {
+            newReleaseTitle: typeof loadedSettings.newReleaseTitle === 'string'
+                ? loadedSettings.newReleaseTitle
+                : defaultStoreSettings.newReleaseTitle,
+            newReleaseMessage: typeof loadedSettings.newReleaseMessage === 'string'
+                ? loadedSettings.newReleaseMessage
+                : defaultStoreSettings.newReleaseMessage
+        };
+    }
+    catch {
+        return defaultStoreSettings;
+    }
+}
 function saveProducts(productsToSave) {
     fs_1.default.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
 }
 function savePurchases(purchasesToSave) {
     fs_1.default.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
+}
+function saveStoreSettings(settingsToSave) {
+    fs_1.default.writeFileSync(storeSettingsFilePath, JSON.stringify(settingsToSave, null, 2), 'utf-8');
 }
 function deleteUploadedFile(fileUrl) {
     if (!fileUrl) {
@@ -156,8 +184,12 @@ function getUploadedFile(req, fieldName) {
     return filesByField[fieldName][0];
 }
 const purchases = loadPurchases();
+const storeSettings = loadStoreSettings();
 if (!fs_1.default.existsSync(purchasesFilePath)) {
     savePurchases(purchases);
+}
+if (!fs_1.default.existsSync(storeSettingsFilePath)) {
+    saveStoreSettings(storeSettings);
 }
 // Tell Express to understand JSON after the Stripe webhook route.
 app.use(express_1.default.json());
@@ -257,6 +289,21 @@ app.get('/api/products/:id', (req, res) => {
         return res.status(404).json({ error: 'Product not found.' });
     }
     res.json(product);
+});
+// GET /api/store-settings returns simple storefront UI settings.
+app.get('/api/store-settings', (_req, res) => {
+    res.json(storeSettings);
+});
+// PUT /api/admin/store-settings updates storefront UI settings.
+app.put('/api/admin/store-settings', requireAdminAuth, (req, res) => {
+    const { newReleaseTitle, newReleaseMessage } = req.body;
+    if (typeof newReleaseTitle !== 'string' || typeof newReleaseMessage !== 'string') {
+        return res.status(400).json({ error: 'Please provide newReleaseTitle and newReleaseMessage as text.' });
+    }
+    storeSettings.newReleaseTitle = newReleaseTitle.trim() || defaultStoreSettings.newReleaseTitle;
+    storeSettings.newReleaseMessage = newReleaseMessage.trim() || defaultStoreSettings.newReleaseMessage;
+    saveStoreSettings(storeSettings);
+    res.json(storeSettings);
 });
 // POST /api/admin/login gives a simple token to the admin dashboard.
 app.post('/api/admin/login', (req, res) => {

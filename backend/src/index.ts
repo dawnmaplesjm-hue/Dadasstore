@@ -62,6 +62,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Store product data in a local JSON file so it survives restarts.
 const dataFilePath = path.join(backendRootDir, 'products.json');
 const purchasesFilePath = path.join(backendRootDir, 'purchases.json');
+const storeSettingsFilePath = path.join(backendRootDir, 'store-settings.json');
 
 // Make uploaded files available through a URL.
 app.use('/uploads', express.static(uploadsDir));
@@ -116,6 +117,11 @@ type Purchase = {
   downloadUrl: string;
 };
 
+type StoreSettings = {
+  newReleaseTitle: string;
+  newReleaseMessage: string;
+};
+
 function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization;
   const expectedValue = `Bearer ${adminToken}`;
@@ -131,6 +137,11 @@ const defaultProducts: Product[] = [
   { id: 1, title: 'Math Ebook', price: 9.99, description: 'A beginner-friendly math ebook.', pdfUrl: '' },
   { id: 2, title: 'Science Worksheet', price: 4.99, description: 'Printable science worksheet for learners.', pdfUrl: '' }
 ];
+
+const defaultStoreSettings: StoreSettings = {
+  newReleaseTitle: 'Premium digital bundle',
+  newReleaseMessage: 'Buy once, download instantly, and access your files anytime.'
+};
 
 function loadProducts(): Product[] {
   if (!fs.existsSync(dataFilePath)) {
@@ -170,12 +181,38 @@ function loadPurchases(): Purchase[] {
   }
 }
 
+function loadStoreSettings(): StoreSettings {
+  if (!fs.existsSync(storeSettingsFilePath)) {
+    return defaultStoreSettings;
+  }
+
+  try {
+    const fileContents = fs.readFileSync(storeSettingsFilePath, 'utf-8');
+    const loadedSettings = JSON.parse(fileContents) as Partial<StoreSettings>;
+
+    return {
+      newReleaseTitle: typeof loadedSettings.newReleaseTitle === 'string'
+        ? loadedSettings.newReleaseTitle
+        : defaultStoreSettings.newReleaseTitle,
+      newReleaseMessage: typeof loadedSettings.newReleaseMessage === 'string'
+        ? loadedSettings.newReleaseMessage
+        : defaultStoreSettings.newReleaseMessage
+    };
+  } catch {
+    return defaultStoreSettings;
+  }
+}
+
 function saveProducts(productsToSave: Product[]) {
   fs.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
 }
 
 function savePurchases(purchasesToSave: Purchase[]) {
   fs.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
+}
+
+function saveStoreSettings(settingsToSave: StoreSettings) {
+  fs.writeFileSync(storeSettingsFilePath, JSON.stringify(settingsToSave, null, 2), 'utf-8');
 }
 
 function deleteUploadedFile(fileUrl?: string) {
@@ -210,9 +247,14 @@ function getUploadedFile(req: Request, fieldName: 'pdf' | 'image') {
 }
 
 const purchases: Purchase[] = loadPurchases();
+const storeSettings: StoreSettings = loadStoreSettings();
 
 if (!fs.existsSync(purchasesFilePath)) {
   savePurchases(purchases);
+}
+
+if (!fs.existsSync(storeSettingsFilePath)) {
+  saveStoreSettings(storeSettings);
 }
 
 // Tell Express to understand JSON after the Stripe webhook route.
@@ -337,6 +379,26 @@ app.get('/api/products/:id', (req: Request, res: Response) => {
   }
 
   res.json(product);
+});
+
+// GET /api/store-settings returns simple storefront UI settings.
+app.get('/api/store-settings', (_req: Request, res: Response) => {
+  res.json(storeSettings);
+});
+
+// PUT /api/admin/store-settings updates storefront UI settings.
+app.put('/api/admin/store-settings', requireAdminAuth, (req: Request, res: Response) => {
+  const { newReleaseTitle, newReleaseMessage } = req.body;
+
+  if (typeof newReleaseTitle !== 'string' || typeof newReleaseMessage !== 'string') {
+    return res.status(400).json({ error: 'Please provide newReleaseTitle and newReleaseMessage as text.' });
+  }
+
+  storeSettings.newReleaseTitle = newReleaseTitle.trim() || defaultStoreSettings.newReleaseTitle;
+  storeSettings.newReleaseMessage = newReleaseMessage.trim() || defaultStoreSettings.newReleaseMessage;
+  saveStoreSettings(storeSettings);
+
+  res.json(storeSettings);
 });
 
 // POST /api/admin/login gives a simple token to the admin dashboard.

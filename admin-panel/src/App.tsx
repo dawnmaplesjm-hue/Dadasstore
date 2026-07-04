@@ -11,6 +11,11 @@ type Product = {
   imageName?: string;
 };
 
+type StoreSettings = {
+  newReleaseTitle: string;
+  newReleaseMessage: string;
+};
+
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
@@ -32,6 +37,10 @@ export default function App() {
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [settingsError, setSettingsError] = useState('');
+  const [newReleaseTitle, setNewReleaseTitle] = useState('Premium digital bundle');
+  const [newReleaseMessage, setNewReleaseMessage] = useState('Buy once, download instantly, and access your files anytime.');
 
   const getAuthHeaders = (): Record<string, string> => {
     if (!authToken) {
@@ -65,7 +74,46 @@ export default function App() {
       .then((res) => res.json())
       .then(setProducts)
       .catch(() => setError('Unable to load products.'));
+
+    fetch(`${configuredApiBaseUrl}/api/store-settings`)
+      .then((res) => res.json())
+      .then((settings: StoreSettings) => {
+        setNewReleaseTitle(settings.newReleaseTitle || 'Premium digital bundle');
+        setNewReleaseMessage(settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.');
+      })
+      .catch(() => setSettingsError('Unable to load store settings.'));
   }, []);
+
+  const saveStoreSettings = async () => {
+    setSettingsError('');
+    setSettingsMessage('');
+
+    if (!authToken) {
+      setSettingsError('Please login as admin to edit store settings.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/admin/store-settings`, {
+        method: 'PUT',
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({
+          newReleaseTitle,
+          newReleaseMessage
+        })
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to save store settings.');
+        setSettingsError(message);
+        return;
+      }
+
+      setSettingsMessage('Storefront settings saved.');
+    } catch {
+      setSettingsError('Unable to reach the server. Please check your backend URL and network.');
+    }
+  };
 
   const handleLogin = async () => {
     setError('');
@@ -324,6 +372,29 @@ export default function App() {
 
         <section className="content-grid">
           <div className="panel-card form-card">
+            <h2>Storefront Banner</h2>
+            <p className="card-subtitle">Edit the customer-facing New Release section.</p>
+
+            {settingsError && <div className="error-banner compact-error">{settingsError}</div>}
+            {settingsMessage && <div className="success-banner">{settingsMessage}</div>}
+
+            <div className="form-grid">
+              <input
+                placeholder="New release title"
+                value={newReleaseTitle}
+                onChange={(event) => setNewReleaseTitle(event.target.value)}
+              />
+              <textarea
+                placeholder="New release message"
+                value={newReleaseMessage}
+                onChange={(event) => setNewReleaseMessage(event.target.value)}
+                rows={3}
+              />
+              <button className="muted-button" onClick={() => void saveStoreSettings()}>
+                Save New Release
+              </button>
+            </div>
+
             <h2>Create Product</h2>
             <p className="card-subtitle">Use the form below to add a digital product and optionally attach a PDF.</p>
 

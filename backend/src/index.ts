@@ -75,15 +75,23 @@ const upload = multer({
     }
   }),
   fileFilter: (_req, file, callback) => {
-    const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
-    if (isPdf) {
+    const fileName = file.originalname.toLowerCase();
+    const isPdf = file.mimetype === 'application/pdf' || fileName.endsWith('.pdf');
+    const isImage = file.mimetype.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(fileName);
+
+    if (isPdf || isImage) {
       callback(null, true);
       return;
     }
 
-    callback(new Error('Only PDF files are allowed.'));
+    callback(new Error('Only PDF or image files are allowed.'));
   }
 });
+
+const uploadProductAssets = upload.fields([
+  { name: 'pdf', maxCount: 1 },
+  { name: 'image', maxCount: 1 }
+]);
 
 // Sample product data stored in memory for learning.
 // This is not a real database, so data resets when the server restarts.
@@ -91,8 +99,11 @@ type Product = {
   id: number;
   title: string;
   price: number;
+  description?: string;
   pdfUrl?: string;
   pdfName?: string;
+  imageUrl?: string;
+  imageName?: string;
 };
 
 type Purchase = {
@@ -117,8 +128,8 @@ function requireAdminAuth(req: Request, res: Response, next: express.NextFunctio
 }
 
 const defaultProducts: Product[] = [
-  { id: 1, title: 'Math Ebook', price: 9.99, pdfUrl: '' },
-  { id: 2, title: 'Science Worksheet', price: 4.99, pdfUrl: '' }
+  { id: 1, title: 'Math Ebook', price: 9.99, description: 'A beginner-friendly math ebook.', pdfUrl: '' },
+  { id: 2, title: 'Science Worksheet', price: 4.99, description: 'Printable science worksheet for learners.', pdfUrl: '' }
 ];
 
 function loadProducts(): Product[] {
@@ -167,12 +178,12 @@ function savePurchases(purchasesToSave: Purchase[]) {
   fs.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
 }
 
-function deletePdfFile(pdfUrl?: string) {
-  if (!pdfUrl) {
+function deleteUploadedFile(fileUrl?: string) {
+  if (!fileUrl) {
     return;
   }
 
-  const fileName = path.basename(pdfUrl);
+  const fileName = path.basename(fileUrl);
   const filePath = path.join(uploadsDir, fileName);
 
   if (fs.existsSync(filePath)) {
@@ -186,6 +197,16 @@ function getProductPdfPath(product: Product) {
   }
 
   return path.join(uploadsDir, path.basename(product.pdfUrl));
+}
+
+function getUploadedFile(req: Request, fieldName: 'pdf' | 'image') {
+  const filesByField = req.files as { [fieldName: string]: Express.Multer.File[] } | undefined;
+
+  if (!filesByField || !Array.isArray(filesByField[fieldName]) || filesByField[fieldName].length === 0) {
+    return null;
+  }
+
+  return filesByField[fieldName][0];
 }
 
 const purchases: Purchase[] = loadPurchases();
@@ -408,7 +429,7 @@ app.post('/api/checkout/create-session', async (req: Request, res: Response) => 
             unit_amount: Math.round(product.price * 100),
             product_data: {
               name: product.title,
-              description: product.pdfName || 'Instant digital download'
+              description: product.description || product.pdfName || 'Instant digital download'
             }
           }
         }
@@ -464,7 +485,7 @@ app.get('/api/checkout/download/:sessionId', async (req: Request, res: Response)
 
 // POST /api/products accepts a new product and returns it
 app.post('/api/products', requireAdminAuth, (req: Request, res: Response) => {
-  const { title, price } = req.body;
+  const { title, price, description } = req.body;
 
   // Basic validation for learning purposes
   if (!title || typeof title !== 'string' || !price || typeof price !== 'number') {
@@ -477,6 +498,7 @@ app.post('/api/products', requireAdminAuth, (req: Request, res: Response) => {
     id: products.length + 1,
     title,
     price,
+    description: typeof description === 'string' ? description.trim() : '',
     pdfUrl: ''
   };
 
@@ -487,8 +509,10 @@ app.post('/api/products', requireAdminAuth, (req: Request, res: Response) => {
 });
 
 // POST /api/products/upload accepts a PDF file and saves it with the product
-app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req: Request, res: Response) => {
-  const { title, price } = req.body;
+app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req: Request, res: Response) => {
+  const { title, price, description } = req.body;
+  const uploadedPdf = getUploadedFile(req, 'pdf');
+  const uploadedImage = getUploadedFile(req, 'image');
 
   if (!title || typeof title !== 'string' || !price || Number.isNaN(Number(price))) {
     return res.status(400).json({
@@ -496,7 +520,7 @@ app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req: R
     });
   }
 
-  if (!req.file) {
+  if (!uploadedPdf) {
     return res.status(400).json({ error: 'Please choose a PDF file to upload.' });
   }
 
@@ -504,8 +528,11 @@ app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req: R
     id: products.length + 1,
     title: title.trim(),
     price: Number(price),
-    pdfUrl: `/uploads/${req.file.filename}`,
-    pdfName: req.file.originalname
+    description: typeof description === 'string' ? description.trim() : '',
+    pdfUrl: `/uploads/${uploadedPdf.filename}`,
+    pdfName: uploadedPdf.originalname,
+    imageUrl: uploadedImage ? `/uploads/${uploadedImage.filename}` : '',
+    imageName: uploadedImage ? uploadedImage.originalname : ''
   };
 
   products.push(newProduct);
@@ -517,7 +544,7 @@ app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req: R
 // PUT /api/products/:id updates a product by its ID
 app.put('/api/products/:id', requireAdminAuth, (req: Request, res: Response) => {
   const productId = Number(req.params.id);
-  const { title, price } = req.body;
+  const { title, price, description } = req.body;
 
   if (Number.isNaN(productId)) {
     return res.status(400).json({ error: 'Product ID must be a number.' });
@@ -537,15 +564,21 @@ app.put('/api/products/:id', requireAdminAuth, (req: Request, res: Response) => 
     product.price = price;
   }
 
+  if (typeof description === 'string') {
+    product.description = description.trim();
+  }
+
   saveProducts(products);
 
   res.json(product);
 });
 
 // PUT /api/products/:id/upload updates product info and can replace the PDF file
-app.put('/api/products/:id/upload', requireAdminAuth, upload.single('pdf'), (req: Request, res: Response) => {
+app.put('/api/products/:id/upload', requireAdminAuth, uploadProductAssets, (req: Request, res: Response) => {
   const productId = Number(req.params.id);
-  const { title, price } = req.body;
+  const { title, price, description } = req.body;
+  const uploadedPdf = getUploadedFile(req, 'pdf');
+  const uploadedImage = getUploadedFile(req, 'image');
 
   if (Number.isNaN(productId)) {
     return res.status(400).json({ error: 'Product ID must be a number.' });
@@ -565,11 +598,22 @@ app.put('/api/products/:id/upload', requireAdminAuth, upload.single('pdf'), (req
     product.price = Number(price);
   }
 
-  if (req.file) {
+  if (typeof description === 'string') {
+    product.description = description.trim();
+  }
+
+  if (uploadedPdf) {
     // Replace previous PDF file so the uploads folder stays clean.
-    deletePdfFile(product.pdfUrl);
-    product.pdfUrl = `/uploads/${req.file.filename}`;
-    product.pdfName = req.file.originalname;
+    deleteUploadedFile(product.pdfUrl);
+    product.pdfUrl = `/uploads/${uploadedPdf.filename}`;
+    product.pdfName = uploadedPdf.originalname;
+  }
+
+  if (uploadedImage) {
+    // Replace previous image file when admin uploads a new one.
+    deleteUploadedFile(product.imageUrl);
+    product.imageUrl = `/uploads/${uploadedImage.filename}`;
+    product.imageName = uploadedImage.originalname;
   }
 
   saveProducts(products);
@@ -591,7 +635,8 @@ app.delete('/api/products/:id', requireAdminAuth, (req: Request, res: Response) 
     return res.status(404).json({ error: 'Product not found.' });
   }
 
-  deletePdfFile(products[index].pdfUrl);
+  deleteUploadedFile(products[index].pdfUrl);
+  deleteUploadedFile(products[index].imageUrl);
   products.splice(index, 1);
   saveProducts(products);
 

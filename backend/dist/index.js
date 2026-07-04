@@ -68,14 +68,20 @@ const upload = (0, multer_1.default)({
         }
     }),
     fileFilter: (_req, file, callback) => {
-        const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
-        if (isPdf) {
+        const fileName = file.originalname.toLowerCase();
+        const isPdf = file.mimetype === 'application/pdf' || fileName.endsWith('.pdf');
+        const isImage = file.mimetype.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(fileName);
+        if (isPdf || isImage) {
             callback(null, true);
             return;
         }
-        callback(new Error('Only PDF files are allowed.'));
+        callback(new Error('Only PDF or image files are allowed.'));
     }
 });
+const uploadProductAssets = upload.fields([
+    { name: 'pdf', maxCount: 1 },
+    { name: 'image', maxCount: 1 }
+]);
 function requireAdminAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     const expectedValue = `Bearer ${adminToken}`;
@@ -85,8 +91,8 @@ function requireAdminAuth(req, res, next) {
     next();
 }
 const defaultProducts = [
-    { id: 1, title: 'Math Ebook', price: 9.99, pdfUrl: '' },
-    { id: 2, title: 'Science Worksheet', price: 4.99, pdfUrl: '' }
+    { id: 1, title: 'Math Ebook', price: 9.99, description: 'A beginner-friendly math ebook.', pdfUrl: '' },
+    { id: 2, title: 'Science Worksheet', price: 4.99, description: 'Printable science worksheet for learners.', pdfUrl: '' }
 ];
 function loadProducts() {
     if (!fs_1.default.existsSync(dataFilePath)) {
@@ -126,11 +132,11 @@ function saveProducts(productsToSave) {
 function savePurchases(purchasesToSave) {
     fs_1.default.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
 }
-function deletePdfFile(pdfUrl) {
-    if (!pdfUrl) {
+function deleteUploadedFile(fileUrl) {
+    if (!fileUrl) {
         return;
     }
-    const fileName = path_1.default.basename(pdfUrl);
+    const fileName = path_1.default.basename(fileUrl);
     const filePath = path_1.default.join(uploadsDir, fileName);
     if (fs_1.default.existsSync(filePath)) {
         fs_1.default.unlinkSync(filePath);
@@ -141,6 +147,13 @@ function getProductPdfPath(product) {
         return null;
     }
     return path_1.default.join(uploadsDir, path_1.default.basename(product.pdfUrl));
+}
+function getUploadedFile(req, fieldName) {
+    const filesByField = req.files;
+    if (!filesByField || !Array.isArray(filesByField[fieldName]) || filesByField[fieldName].length === 0) {
+        return null;
+    }
+    return filesByField[fieldName][0];
 }
 const purchases = loadPurchases();
 if (!fs_1.default.existsSync(purchasesFilePath)) {
@@ -322,7 +335,7 @@ app.post('/api/checkout/create-session', async (req, res) => {
                         unit_amount: Math.round(product.price * 100),
                         product_data: {
                             name: product.title,
-                            description: product.pdfName || 'Instant digital download'
+                            description: product.description || product.pdfName || 'Instant digital download'
                         }
                     }
                 }
@@ -373,7 +386,7 @@ app.get('/api/checkout/download/:sessionId', async (req, res) => {
 });
 // POST /api/products accepts a new product and returns it
 app.post('/api/products', requireAdminAuth, (req, res) => {
-    const { title, price } = req.body;
+    const { title, price, description } = req.body;
     // Basic validation for learning purposes
     if (!title || typeof title !== 'string' || !price || typeof price !== 'number') {
         return res.status(400).json({
@@ -384,6 +397,7 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
         id: products.length + 1,
         title,
         price,
+        description: typeof description === 'string' ? description.trim() : '',
         pdfUrl: ''
     };
     products.push(newProduct);
@@ -391,22 +405,27 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
     res.status(201).json(newProduct);
 });
 // POST /api/products/upload accepts a PDF file and saves it with the product
-app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req, res) => {
-    const { title, price } = req.body;
+app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req, res) => {
+    const { title, price, description } = req.body;
+    const uploadedPdf = getUploadedFile(req, 'pdf');
+    const uploadedImage = getUploadedFile(req, 'image');
     if (!title || typeof title !== 'string' || !price || Number.isNaN(Number(price))) {
         return res.status(400).json({
             error: 'Please send a valid product title, price, and PDF file.'
         });
     }
-    if (!req.file) {
+    if (!uploadedPdf) {
         return res.status(400).json({ error: 'Please choose a PDF file to upload.' });
     }
     const newProduct = {
         id: products.length + 1,
         title: title.trim(),
         price: Number(price),
-        pdfUrl: `/uploads/${req.file.filename}`,
-        pdfName: req.file.originalname
+        description: typeof description === 'string' ? description.trim() : '',
+        pdfUrl: `/uploads/${uploadedPdf.filename}`,
+        pdfName: uploadedPdf.originalname,
+        imageUrl: uploadedImage ? `/uploads/${uploadedImage.filename}` : '',
+        imageName: uploadedImage ? uploadedImage.originalname : ''
     };
     products.push(newProduct);
     saveProducts(products);
@@ -415,7 +434,7 @@ app.post('/api/products/upload', requireAdminAuth, upload.single('pdf'), (req, r
 // PUT /api/products/:id updates a product by its ID
 app.put('/api/products/:id', requireAdminAuth, (req, res) => {
     const productId = Number(req.params.id);
-    const { title, price } = req.body;
+    const { title, price, description } = req.body;
     if (Number.isNaN(productId)) {
         return res.status(400).json({ error: 'Product ID must be a number.' });
     }
@@ -429,13 +448,18 @@ app.put('/api/products/:id', requireAdminAuth, (req, res) => {
     if (price && typeof price === 'number') {
         product.price = price;
     }
+    if (typeof description === 'string') {
+        product.description = description.trim();
+    }
     saveProducts(products);
     res.json(product);
 });
 // PUT /api/products/:id/upload updates product info and can replace the PDF file
-app.put('/api/products/:id/upload', requireAdminAuth, upload.single('pdf'), (req, res) => {
+app.put('/api/products/:id/upload', requireAdminAuth, uploadProductAssets, (req, res) => {
     const productId = Number(req.params.id);
-    const { title, price } = req.body;
+    const { title, price, description } = req.body;
+    const uploadedPdf = getUploadedFile(req, 'pdf');
+    const uploadedImage = getUploadedFile(req, 'image');
     if (Number.isNaN(productId)) {
         return res.status(400).json({ error: 'Product ID must be a number.' });
     }
@@ -449,11 +473,20 @@ app.put('/api/products/:id/upload', requireAdminAuth, upload.single('pdf'), (req
     if (price && !Number.isNaN(Number(price))) {
         product.price = Number(price);
     }
-    if (req.file) {
+    if (typeof description === 'string') {
+        product.description = description.trim();
+    }
+    if (uploadedPdf) {
         // Replace previous PDF file so the uploads folder stays clean.
-        deletePdfFile(product.pdfUrl);
-        product.pdfUrl = `/uploads/${req.file.filename}`;
-        product.pdfName = req.file.originalname;
+        deleteUploadedFile(product.pdfUrl);
+        product.pdfUrl = `/uploads/${uploadedPdf.filename}`;
+        product.pdfName = uploadedPdf.originalname;
+    }
+    if (uploadedImage) {
+        // Replace previous image file when admin uploads a new one.
+        deleteUploadedFile(product.imageUrl);
+        product.imageUrl = `/uploads/${uploadedImage.filename}`;
+        product.imageName = uploadedImage.originalname;
     }
     saveProducts(products);
     res.json(product);
@@ -468,7 +501,8 @@ app.delete('/api/products/:id', requireAdminAuth, (req, res) => {
     if (index === -1) {
         return res.status(404).json({ error: 'Product not found.' });
     }
-    deletePdfFile(products[index].pdfUrl);
+    deleteUploadedFile(products[index].pdfUrl);
+    deleteUploadedFile(products[index].imageUrl);
     products.splice(index, 1);
     saveProducts(products);
     res.json({ message: 'Product deleted successfully.' });

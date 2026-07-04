@@ -153,7 +153,23 @@ a {
   outline: none;
 }
 
+.form-grid textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5eef9;
+  outline: none;
+  resize: vertical;
+}
+
 .form-grid input:focus {
+  border-color: rgba(125, 211, 252, 0.75);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+}
+
+.form-grid textarea:focus {
   border-color: rgba(125, 211, 252, 0.75);
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
 }
@@ -293,10 +309,30 @@ a {
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
 }
 
+.edit-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
 .product-price {
   margin-top: 4px;
   color: #7dd3fc;
   font-weight: 700;
+}
+
+.product-description {
+  margin: 6px 0 0;
+  color: #b5c1d1;
+  font-size: 0.9rem;
+}
+
+.product-thumb {
+  margin-top: 10px;
+  width: 100%;
+  max-width: 180px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  object-fit: cover;
 }
 
 .product-actions {

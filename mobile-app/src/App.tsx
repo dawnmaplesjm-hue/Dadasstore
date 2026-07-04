@@ -4,8 +4,11 @@ type Product = {
   id: number;
   title: string;
   price: number;
+  description?: string;
   pdfUrl?: string;
   pdfName?: string;
+  imageUrl?: string;
+  imageName?: string;
 };
 
 type Purchase = {
@@ -59,6 +62,7 @@ export default function App() {
   const [downloadUrl, setDownloadUrl] = useState('');
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
   const adminPanelUrl = getAdminPanelUrl();
@@ -211,6 +215,14 @@ export default function App() {
     window.open(adminPanelUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const openProductDetails = (product: Product) => {
+    setSelectedProduct(product);
+  };
+
+  const closeProductDetails = () => {
+    setSelectedProduct(null);
+  };
+
   return (
     <div className="store-shell">
       <main className="store-phone">
@@ -279,21 +291,50 @@ export default function App() {
           ) : (
             <div className="product-grid">
               {filteredProducts.map((product) => (
-                <article className="product-card" key={product.id}>
+                <article
+                  className="product-card"
+                  key={product.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openProductDetails(product)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openProductDetails(product);
+                    }
+                  }}
+                >
                   <div className="thumb-block" aria-hidden="true">
-                    <span className="thumb-file-type">PDF</span>
-                    <span className="thumb-category">Instant</span>
+                    {product.imageUrl ? (
+                      <img
+                        className="thumb-image"
+                        src={`${configuredApiBaseUrl}${product.imageUrl}`}
+                        alt={product.title}
+                      />
+                    ) : (
+                      <>
+                        <span className="thumb-file-type">PDF</span>
+                        <span className="thumb-category">Instant</span>
+                      </>
+                    )}
                   </div>
                   <div className="product-copy">
                     <h3>{product.title}</h3>
-                    <p>{product.pdfName || 'Instant download after payment.'}</p>
+                    <p>{product.description || product.pdfName || 'Instant download after payment.'}</p>
                     <div className="meta-row">
                       <span className="meta-chip">Instant Access</span>
                       <span className="meta-chip">Secure Checkout</span>
                     </div>
                     <div className="product-row">
                       <strong>${product.price.toFixed(2)}</strong>
-                      <button className="buy-button" type="button" onClick={() => startCheckout(product.id)}>
+                      <button
+                        className="buy-button"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void startCheckout(product.id);
+                        }}
+                      >
                         Buy now
                       </button>
                     </div>
@@ -321,6 +362,33 @@ export default function App() {
                 </article>
               ))}
             </div>
+          </section>
+        )}
+
+        {selectedProduct && (
+          <section className="product-modal-overlay" onClick={closeProductDetails}>
+            <article className="product-modal" onClick={(event) => event.stopPropagation()}>
+              <button className="modal-close" type="button" onClick={closeProductDetails}>Close</button>
+              {selectedProduct.imageUrl && (
+                <img
+                  className="modal-image"
+                  src={`${configuredApiBaseUrl}${selectedProduct.imageUrl}`}
+                  alt={selectedProduct.title}
+                />
+              )}
+              <h3>{selectedProduct.title}</h3>
+              <p>{selectedProduct.description || selectedProduct.pdfName || 'Instant digital product download.'}</p>
+              <div className="modal-row">
+                <strong>${selectedProduct.price.toFixed(2)}</strong>
+                <button
+                  className="buy-button"
+                  type="button"
+                  onClick={() => void startCheckout(selectedProduct.id)}
+                >
+                  Buy now
+                </button>
+              </div>
+            </article>
           </section>
         )}
       </main>

@@ -4,8 +4,11 @@ type Product = {
   id: number;
   title: string;
   price: number;
+  description?: string;
   pdfUrl?: string;
   pdfName?: string;
+  imageUrl?: string;
+  imageName?: string;
 };
 
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -18,11 +21,15 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editPrice, setEditPrice] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -119,14 +126,18 @@ export default function App() {
               const formData = new FormData();
               formData.append('title', title.trim());
               formData.append('price', String(parsedPrice));
+              formData.append('description', description.trim());
               formData.append('pdf', pdfFile);
+              if (imageFile) {
+                formData.append('image', imageFile);
+              }
               return formData;
             })()
           })
         : await fetch(`${configuredApiBaseUrl}/api/products`, {
             method: 'POST',
             headers: getJsonAuthHeaders(),
-            body: JSON.stringify({ title: title.trim(), price: parsedPrice })
+            body: JSON.stringify({ title: title.trim(), price: parsedPrice, description: description.trim() })
           });
 
       if (!response.ok) {
@@ -142,7 +153,9 @@ export default function App() {
       setProducts((current) => [...current, newProduct]);
       setTitle('');
       setPrice('');
+      setDescription('');
       setPdfFile(null);
+      setImageFile(null);
     } catch {
       setError('Unable to reach the server. Please check your backend URL and network.');
     } finally {
@@ -187,14 +200,18 @@ export default function App() {
     setEditingId(product.id);
     setEditTitle(product.title);
     setEditPrice(String(product.price));
+    setEditDescription(product.description || '');
     setEditPdfFile(null);
+    setEditImageFile(null);
   };
 
   const cancelEditing = () => {
     setEditingId(null);
     setEditTitle('');
     setEditPrice('');
+    setEditDescription('');
     setEditPdfFile(null);
+    setEditImageFile(null);
   };
 
   const saveEditing = async (id: number) => {
@@ -212,7 +229,7 @@ export default function App() {
     }
 
     try {
-      const response = editPdfFile
+        const response = editPdfFile || editImageFile
           ? await fetch(`${configuredApiBaseUrl}/api/products/${id}/upload`, {
             method: 'PUT',
             headers: getAuthHeaders(),
@@ -220,14 +237,20 @@ export default function App() {
               const formData = new FormData();
               formData.append('title', editTitle.trim());
               formData.append('price', String(parsedPrice));
-              formData.append('pdf', editPdfFile);
+              formData.append('description', editDescription.trim());
+              if (editPdfFile) {
+                formData.append('pdf', editPdfFile);
+              }
+              if (editImageFile) {
+                formData.append('image', editImageFile);
+              }
               return formData;
             })()
           })
         : await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
             method: 'PUT',
             headers: getJsonAuthHeaders(),
-            body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice })
+            body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice, description: editDescription.trim() })
           });
 
       if (!response.ok) {
@@ -315,6 +338,20 @@ export default function App() {
                 value={price}
                 onChange={(event) => setPrice(event.target.value)}
               />
+              <textarea
+                placeholder="Short product description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
+              <label className="file-picker">
+                <span>{imageFile ? imageFile.name : 'Choose product image (optional)'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
               <label className="file-picker">
                 <span>{pdfFile ? pdfFile.name : 'Choose PDF file'}</span>
                 <input
@@ -358,6 +395,21 @@ export default function App() {
                           onChange={(event) => setEditPrice(event.target.value)}
                           placeholder="Price"
                         />
+                        <textarea
+                          className="edit-input edit-textarea"
+                          value={editDescription}
+                          onChange={(event) => setEditDescription(event.target.value)}
+                          placeholder="Short product description"
+                          rows={3}
+                        />
+                        <label className="file-picker edit-file-picker">
+                          <span>{editImageFile ? editImageFile.name : 'Replace image (optional)'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => setEditImageFile(event.target.files?.[0] ?? null)}
+                          />
+                        </label>
                         <label className="file-picker edit-file-picker">
                           <span>{editPdfFile ? editPdfFile.name : 'Replace PDF (optional)'}</span>
                           <input
@@ -380,6 +432,14 @@ export default function App() {
                         <div>
                           <strong>{product.title}</strong>
                           <div className="product-price">${product.price.toFixed(2)}</div>
+                          {product.description && <p className="product-description">{product.description}</p>}
+                          {product.imageUrl && (
+                            <img
+                              className="product-thumb"
+                              src={`${configuredApiBaseUrl}${product.imageUrl}`}
+                              alt={product.title}
+                            />
+                          )}
                         </div>
                         <div className="product-actions">
                           {product.pdfUrl && (

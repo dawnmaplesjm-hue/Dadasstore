@@ -25,7 +25,6 @@ const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 const getApiBaseCandidates = () => {
   const androidCandidates = [
     'http://10.0.2.2:5000',
-    'http://10.0.2.2:5000',
     import.meta.env.VITE_API_BASE_URL,
     configuredApiBaseUrl,
     `${window.location.protocol}//${window.location.hostname}:5000`,

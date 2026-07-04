@@ -24,6 +24,7 @@ export default function App() {
   const [editPrice, setEditPrice] = useState('');
   const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
   const getAuthHeaders = (): Record<string, string> => {
     if (!authToken) {
@@ -103,6 +104,12 @@ export default function App() {
       return;
     }
 
+    if (isAdding) {
+      return;
+    }
+
+    setIsAdding(true);
+
     try {
       const response = pdfFile
           ? await fetch(`${configuredApiBaseUrl}/api/products/upload`, {
@@ -138,6 +145,8 @@ export default function App() {
       setPdfFile(null);
     } catch {
       setError('Unable to reach the server. Please check your backend URL and network.');
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -315,8 +324,8 @@ export default function App() {
                 />
               </label>
               <small className="helper-text">Pick a PDF to upload, or leave it empty to add a product without a file.</small>
-              <button className="primary-button" onClick={handleAdd}>
-                {pdfFile ? 'Upload PDF Product' : 'Add Product'}
+              <button className="primary-button" onClick={handleAdd} disabled={isAdding}>
+                {isAdding ? 'Uploading...' : pdfFile ? 'Upload PDF Product' : 'Add Product'}
               </button>
             </div>
           </div>

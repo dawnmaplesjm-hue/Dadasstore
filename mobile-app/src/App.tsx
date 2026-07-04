@@ -90,8 +90,8 @@ export default function App() {
 
       const data = await response.json();
       setProducts(data);
-    } catch {
-      setError('Unable to load products.');
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to load products.');
     }
   }, []);
 

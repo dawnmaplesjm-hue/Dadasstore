@@ -187,9 +187,15 @@ a {
 
 .file-picker input {
   position: absolute;
-  inset: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
   opacity: 0;
-  cursor: pointer;
+  pointer-events: none;
 }
 
 .helper-text {
@@ -201,6 +207,8 @@ a {
 .danger-button,
 .save-button,
 .muted-button {
+  position: relative;
+  z-index: 1;
   border: none;
   border-radius: 16px;
   padding: 14px 18px;

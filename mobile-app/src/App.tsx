@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
 
 type Product = {
   id: number;
@@ -22,54 +21,17 @@ type Purchase = {
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
-const getApiBaseCandidates = () => {
-  const androidCandidates = [
-    'http://10.0.2.2:5000',
-    import.meta.env.VITE_API_BASE_URL,
-    configuredApiBaseUrl,
-    `${window.location.protocol}//${window.location.hostname}:5000`,
-    'http://localhost:5000',
-    'http://127.0.0.1:5000'
-  ].filter((value): value is string => Boolean(value));
-
-  const webCandidates = [
-    import.meta.env.VITE_API_BASE_URL,
-    configuredApiBaseUrl,
-    `${window.location.protocol}//${window.location.hostname}:5000`,
-    'http://localhost:5000',
-    'http://127.0.0.1:5000'
-  ].filter((value): value is string => Boolean(value));
-
-  const candidates = Capacitor.getPlatform() === 'android' ? androidCandidates : webCandidates;
-
-  return Array.from(new Set(candidates));
-};
-
-const apiBaseCandidates = getApiBaseCandidates();
-
 const fetchFromApi = async (path: string, init?: RequestInit) => {
-  let lastError: unknown = null;
+  const response = await fetch(`${configuredApiBaseUrl}${path}`, {
+    cache: 'no-store',
+    ...init
+  });
 
-  for (const baseUrl of apiBaseCandidates) {
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        cache: 'no-store',
-        ...init
-      });
-
-      if (response.ok) {
-        return response;
-      }
-
-      lastError = new Error(`Request failed with status ${response.status}.`);
-    } catch (error) {
-      lastError = error;
-    }
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}.`);
   }
 
-  const attemptedHosts = apiBaseCandidates.join(', ');
-  const details = lastError instanceof Error ? lastError.message : 'Unknown network error.';
-  throw new Error(`Unable to reach the store backend. Tried: ${attemptedHosts}. Last error: ${details}`);
+  return response;
 };
 
 const getAdminPanelUrl = () => {

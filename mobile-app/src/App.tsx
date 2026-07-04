@@ -21,6 +21,41 @@ type Purchase = {
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
+const getApiBaseCandidates = () => {
+  const candidates = [
+    import.meta.env.VITE_API_BASE_URL,
+    configuredApiBaseUrl,
+    `${window.location.protocol}//${window.location.hostname}:5000`,
+    'http://localhost:5000',
+    'http://127.0.0.1:5000'
+  ].filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(candidates));
+};
+
+const fetchFromApi = async (path: string, init?: RequestInit) => {
+  let lastError: unknown = null;
+
+  for (const baseUrl of getApiBaseCandidates()) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        cache: 'no-store',
+        ...init
+      });
+
+      if (response.ok) {
+        return response;
+      }
+
+      lastError = new Error(`Request failed with status ${response.status}.`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Unable to reach the store backend.');
+};
+
 const getAdminPanelUrl = () => {
   if (import.meta.env.VITE_ADMIN_URL) {
     return import.meta.env.VITE_ADMIN_URL;
@@ -75,11 +110,7 @@ export default function App() {
 
   const loadProducts = useCallback(async () => {
     try {
-      const response = await fetch(`${configuredApiBaseUrl}/api/products`);
-
-      if (!response.ok) {
-        throw new Error('Unable to load products.');
-      }
+      const response = await fetchFromApi('/api/products');
 
       const data = await response.json();
       setProducts(data);
@@ -90,11 +121,7 @@ export default function App() {
 
   const loadRecentPurchases = useCallback(async () => {
     try {
-      const response = await fetch(`${configuredApiBaseUrl}/api/purchases/recent`);
-
-      if (!response.ok) {
-        throw new Error('Unable to load purchases.');
-      }
+      const response = await fetchFromApi('/api/purchases/recent');
 
       const data = await response.json();
       setRecentPurchases(data);
@@ -149,7 +176,7 @@ export default function App() {
     setError('');
     setCheckoutMessage('Verifying your payment and preparing the download...');
 
-    fetch(`${configuredApiBaseUrl}/api/checkout/session/${sessionId}`)
+    fetchFromApi(`/api/checkout/session/${sessionId}`)
       .then(async (res) => {
         const data = await res.json();
 
@@ -175,7 +202,7 @@ export default function App() {
     setCheckoutMessage('');
 
     try {
-      const response = await fetch(`${configuredApiBaseUrl}/api/checkout/create-session`, {
+      const response = await fetchFromApi('/api/checkout/create-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId })

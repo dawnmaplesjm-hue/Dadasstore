@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type Product = {
   id: number;
@@ -26,6 +26,7 @@ const getApiBaseCandidates = () => {
     import.meta.env.VITE_API_BASE_URL,
     configuredApiBaseUrl,
     `${window.location.protocol}//${window.location.hostname}:5000`,
+    'http://10.0.2.2:5000',
     'http://localhost:5000',
     'http://127.0.0.1:5000'
   ].filter((value): value is string => Boolean(value));
@@ -75,18 +76,15 @@ const getAdminPanelUrl = () => {
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [recentPurchases, setRecentPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [error, setError] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
   const adminPanelUrl = getAdminPanelUrl();
-  const downloadsSectionRef = useRef<HTMLElement | null>(null);
-  const historySectionRef = useRef<HTMLElement | null>(null);
 
   const getSessionId = () => new URLSearchParams(window.location.search).get('session_id') || '';
 
@@ -119,23 +117,12 @@ export default function App() {
     }
   }, []);
 
-  const loadRecentPurchases = useCallback(async () => {
-    try {
-      const response = await fetchFromApi('/api/purchases/recent');
-
-      const data = await response.json();
-      setRecentPurchases(data);
-    } catch {
-      setRecentPurchases([]);
-    }
-  }, []);
-
   const refreshStore = useCallback(async () => {
     setError('');
     setLoading(true);
-    await Promise.all([loadProducts(), loadRecentPurchases()]);
+    await loadProducts();
     setLoading(false);
-  }, [loadProducts, loadRecentPurchases]);
+  }, [loadProducts]);
 
   useEffect(() => {
     void refreshStore();
@@ -222,50 +209,15 @@ export default function App() {
 
   const formatPurchaseDate = (isoDate: string) => new Date(isoDate).toLocaleDateString();
 
-  const getDigitalCategory = (product: Product) => {
-    const value = `${product.title} ${product.pdfName || ''}`.toLowerCase();
-
-    if (value.includes('template')) {
-      return 'Template';
+  const searchValue = searchTerm.trim().toLowerCase();
+  const filteredProducts = purchasableProducts.filter((product) => {
+    if (!searchValue) {
+      return true;
     }
 
-    if (value.includes('guide')) {
-      return 'Guide';
-    }
-
-    if (value.includes('worksheet') || value.includes('workbook')) {
-      return 'Worksheet';
-    }
-
-    return 'Ebook';
-  };
-
-  const categoryLabels = [
-    'All',
-    ...Array.from(new Set(purchasableProducts.map((product) => getDigitalCategory(product))))
-  ];
-
-  const filteredProducts = selectedCategory === 'All'
-    ? purchasableProducts
-    : purchasableProducts.filter((product) => getDigitalCategory(product) === selectedCategory);
-
-  const showDownloads = () => {
-    downloadsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const showHistory = () => {
-    historySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const cycleCategoryFilter = () => {
-    if (categoryLabels.length === 0) {
-      return;
-    }
-
-    const currentIndex = categoryLabels.indexOf(selectedCategory);
-    const nextIndex = currentIndex === -1 || currentIndex === categoryLabels.length - 1 ? 0 : currentIndex + 1;
-    setSelectedCategory(categoryLabels[nextIndex]);
-  };
+    const searchableText = `${product.title} ${product.pdfName || ''}`.toLowerCase();
+    return searchableText.includes(searchValue);
+  });
 
   const openAdminPanel = () => {
     window.open(adminPanelUrl, '_blank', 'noopener,noreferrer');
@@ -281,7 +233,6 @@ export default function App() {
           </div>
           <div className="top-actions">
             <button className="icon-pill" type="button" onClick={openAdminPanel}>Admin</button>
-            <button className="icon-pill" type="button" onClick={showHistory}>History</button>
             <button className="icon-pill" type="button" onClick={() => void refreshStore()}>Refresh</button>
           </div>
         </header>
@@ -290,25 +241,16 @@ export default function App() {
           <p className="overline">New Release</p>
           <h2>Premium digital bundle</h2>
           <p>Buy once, download instantly, and access your files anytime.</p>
-          <button className="cta-pill" type="button" onClick={showDownloads}>Browse downloads</button>
         </section>
 
         <section className="search-strip">
-          <input type="text" readOnly value="Search digital products" aria-label="Search" />
-          <button className="icon-pill" type="button" onClick={cycleCategoryFilter}>Filter</button>
-        </section>
-
-        <section className="chip-row">
-          {categoryLabels.map((label) => (
-            <button
-              key={label}
-              className={`chip ${selectedCategory === label ? 'chip-active' : ''}`}
-              type="button"
-              onClick={() => setSelectedCategory(label)}
-            >
-              {label}
-            </button>
-          ))}
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search digital products"
+            aria-label="Search digital products"
+          />
         </section>
 
         {error && <div className="status error">{error}</div>}
@@ -334,29 +276,25 @@ export default function App() {
             <strong>{comingSoonProducts.length}</strong>
             <span>Coming soon</span>
           </article>
-          <article>
-            <strong>{recentPurchases.length}</strong>
-            <span>Purchased</span>
-          </article>
         </section>
 
-        <section className="section-card" ref={downloadsSectionRef}>
+        <section className="section-card">
           <div className="section-head">
-            <h2>Top Downloads</h2>
-            <span>{selectedCategory === 'All' ? 'Ready instantly' : `${selectedCategory} only`}</span>
+            <h2>Buy Now</h2>
+            <span>{filteredProducts.length} ready now</span>
           </div>
 
           {loading ? (
             <p className="muted">Loading products...</p>
           ) : filteredProducts.length === 0 ? (
-            <p className="muted">No products are ready for checkout yet.</p>
+            <p className="muted">No products match your search.</p>
           ) : (
             <div className="product-grid">
               {filteredProducts.map((product) => (
                 <article className="product-card" key={product.id}>
                   <div className="thumb-block" aria-hidden="true">
                     <span className="thumb-file-type">PDF</span>
-                    <span className="thumb-category">{getDigitalCategory(product)}</span>
+                    <span className="thumb-category">Instant</span>
                   </div>
                   <div className="product-copy">
                     <h3>{product.title}</h3>
@@ -397,30 +335,6 @@ export default function App() {
             </div>
           </section>
         )}
-
-        <section className="section-card" ref={historySectionRef}>
-          <div className="section-head">
-            <h2>Purchase History</h2>
-            <span>Saved on server</span>
-          </div>
-          {recentPurchases.length === 0 ? (
-            <p className="muted">No completed purchases yet.</p>
-          ) : (
-            <div className="history-list">
-              {recentPurchases.map((purchase) => (
-                <article className="history-item" key={purchase.sessionId}>
-                  <div>
-                    <strong>{purchase.productTitle}</strong>
-                    <p>{formatPurchaseDate(purchase.purchasedAt)}</p>
-                  </div>
-                  <a className="mini-link" href={`${configuredApiBaseUrl}${purchase.downloadUrl}`}>
-                    Download
-                  </a>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
       </main>
     </div>
   );

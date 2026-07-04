@@ -53,14 +53,15 @@ app.use(cors());
 // Without this, mobile app can't talk to backend
 
 // Store uploaded PDF files in a local folder.
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const backendRootDir = path.resolve(__dirname, '..');
+const uploadsDir = path.join(backendRootDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Store product data in a local JSON file so it survives restarts.
-const dataFilePath = path.join(process.cwd(), 'products.json');
-const purchasesFilePath = path.join(process.cwd(), 'purchases.json');
+const dataFilePath = path.join(backendRootDir, 'products.json');
+const purchasesFilePath = path.join(backendRootDir, 'purchases.json');
 
 // Make uploaded files available through a URL.
 app.use('/uploads', express.static(uploadsDir));

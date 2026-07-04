@@ -49,13 +49,14 @@ app.use((0, cors_1.default)());
 // "cors()" = CORS = Cross-Origin Resource Sharing
 // Without this, mobile app can't talk to backend
 // Store uploaded PDF files in a local folder.
-const uploadsDir = path_1.default.join(process.cwd(), 'uploads');
+const backendRootDir = path_1.default.resolve(__dirname, '..');
+const uploadsDir = path_1.default.join(backendRootDir, 'uploads');
 if (!fs_1.default.existsSync(uploadsDir)) {
     fs_1.default.mkdirSync(uploadsDir, { recursive: true });
 }
 // Store product data in a local JSON file so it survives restarts.
-const dataFilePath = path_1.default.join(process.cwd(), 'products.json');
-const purchasesFilePath = path_1.default.join(process.cwd(), 'purchases.json');
+const dataFilePath = path_1.default.join(backendRootDir, 'products.json');
+const purchasesFilePath = path_1.default.join(backendRootDir, 'purchases.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
 const upload = (0, multer_1.default)({

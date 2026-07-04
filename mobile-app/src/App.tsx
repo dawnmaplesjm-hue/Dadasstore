@@ -21,6 +21,11 @@ type Purchase = {
   downloadUrl: string;
 };
 
+type PurchaseResult = {
+  productTitle: string;
+  downloadUrl: string;
+};
+
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
@@ -67,8 +72,7 @@ export default function App() {
   });
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [checkoutMessage, setCheckoutMessage] = useState('');
-  const [downloadUrl, setDownloadUrl] = useState('');
+  const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
@@ -176,7 +180,7 @@ export default function App() {
 
     setCheckingOut(true);
     setError('');
-    setCheckoutMessage('Verifying your payment and preparing the download...');
+    setPurchaseResult(null);
 
     fetchFromApi(`/api/checkout/session/${sessionId}`)
       .then(async (res) => {
@@ -187,9 +191,10 @@ export default function App() {
         }
 
         const fullDownloadUrl = `${configuredApiBaseUrl}${data.downloadUrl}`;
-        setDownloadUrl(fullDownloadUrl);
-        await triggerBlobDownload(fullDownloadUrl, `${data.productTitle}.pdf`);
-        setCheckoutMessage(`Payment confirmed for ${data.productTitle}. Your download has started.`);
+        setPurchaseResult({
+          productTitle: data.productTitle,
+          downloadUrl: fullDownloadUrl
+        });
       })
       .catch((requestError) => {
         setError(requestError instanceof Error ? requestError.message : 'Unable to verify the payment.');
@@ -201,7 +206,6 @@ export default function App() {
 
   const startCheckout = async (productId: number) => {
     setError('');
-    setCheckoutMessage('');
 
     try {
       const response = await fetchFromApi('/api/checkout/create-session', {
@@ -246,6 +250,36 @@ export default function App() {
     setSelectedProduct(null);
   };
 
+  if (purchaseResult && !checkingOut) {
+    return (
+      <div className="store-shell success-shell">
+        <main className="store-phone success-page">
+          <header className="top-row">
+            <div>
+              <p className="overline">Payment complete</p>
+              <h1>Download ready</h1>
+            </div>
+            <button className="icon-pill" type="button" onClick={() => window.location.assign('/')}>Store</button>
+          </header>
+
+          <section className="success-card">
+            <p className="success-label">Your purchase is ready</p>
+            <h2>{purchaseResult.productTitle}</h2>
+            <p>Tap the button below to download your file now. The store will stay out of the way.</p>
+            <div className="success-actions">
+              <a className="buy-button success-download" href={purchaseResult.downloadUrl}>
+                Download now
+              </a>
+              <button className="secondary-button" type="button" onClick={() => window.location.assign('/') }>
+                Back to store
+              </button>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="store-shell">
       <main className="store-phone">
@@ -278,15 +312,12 @@ export default function App() {
 
         {error && <div className="status error">{error}</div>}
 
-        {(checkingOut || checkoutMessage) && (
+        {checkingOut && (
           <section className="status success">
             <div>
-              <strong>{checkingOut ? 'Processing payment' : 'Order complete'}</strong>
-              <p>{checkoutMessage || 'Your purchase is ready.'}</p>
+              <strong>Processing payment</strong>
+              <p>Verifying your payment and preparing the download...</p>
             </div>
-            {downloadUrl && !checkingOut && (
-              <a className="mini-link" href={downloadUrl}>Download again</a>
-            )}
           </section>
         )}
 

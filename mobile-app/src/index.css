@@ -188,6 +188,65 @@ a {
   color: #d1fff8;
 }
 
+.success-shell {
+  align-items: center;
+}
+
+.success-page {
+  min-height: 88vh;
+  align-content: center;
+}
+
+.success-card {
+  padding: 24px;
+  border-radius: 26px;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 22px 52px rgba(5, 6, 20, 0.42);
+}
+
+.success-card h2 {
+  margin: 6px 0 10px;
+  font-size: 1.7rem;
+  line-height: 1.05;
+  color: #fff;
+}
+
+.success-label {
+  margin: 0;
+  color: #f7b732;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.success-card p {
+  margin: 0;
+  color: rgba(248, 245, 255, 0.88);
+}
+
+.success-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.success-download {
+  justify-content: center;
+  text-decoration: none;
+}
+
+.secondary-button {
+  border-radius: 999px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 700;
+}
+
 .mini-link {
   text-decoration: none;
   border-radius: 999px;

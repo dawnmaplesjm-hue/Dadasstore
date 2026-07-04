@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import multer from 'multer';
 import Stripe from 'stripe';
 
@@ -37,6 +38,7 @@ const port = process.env.PORT || 5000;
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@dadasstore.com';
 const adminPassword = process.env.ADMIN_PASSWORD || 'Love1877';
 const adminToken = process.env.ADMIN_TOKEN || 'dadasstore-dev-token';
+const downloadSecret = process.env.DOWNLOAD_SECRET || adminToken;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 const stripeCurrency = process.env.STRIPE_CURRENCY || 'usd';
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
@@ -209,6 +211,14 @@ function saveProducts(productsToSave: Product[]) {
 
 function savePurchases(purchasesToSave: Purchase[]) {
   fs.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
+}
+
+function createDownloadToken(sessionId: string, productId: number) {
+  return crypto.createHmac('sha256', downloadSecret).update(`${sessionId}:${productId}`).digest('hex');
+}
+
+function isValidDownloadToken(sessionId: string, productId: number, token: string) {
+  return createDownloadToken(sessionId, productId) === token;
 }
 
 function saveStoreSettings(settingsToSave: StoreSettings) {
@@ -480,7 +490,7 @@ app.post('/api/checkout/create-session', async (req: Request, res: Response) => 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      success_url: `${requestOrigin}/?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${requestOrigin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${requestOrigin}/?canceled=true`,
       metadata: { productId: String(product.id) },
       line_items: [
@@ -513,12 +523,14 @@ app.get('/api/checkout/session/:sessionId', async (req: Request, res: Response) 
   try {
     const { session, product } = await getVerifiedCheckoutSession(req.params.sessionId);
     recordPurchase(session.id, product, session.customer_details?.email || session.customer_email || undefined);
+    const downloadToken = createDownloadToken(session.id, product.id);
 
     res.json({
       sessionId: session.id,
       productId: product.id,
       productTitle: product.title,
-      downloadUrl: `/api/checkout/download/${session.id}`
+      downloadToken,
+      downloadUrl: `/api/checkout/download/${session.id}?token=${downloadToken}`
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to verify checkout session.';
@@ -537,7 +549,13 @@ app.get('/api/purchases/recent', (req: Request, res: Response) => {
 // GET /api/checkout/download/:sessionId streams the PDF after payment is verified.
 app.get('/api/checkout/download/:sessionId', async (req: Request, res: Response) => {
   try {
-    const { pdfPath, product } = await getVerifiedCheckoutSession(req.params.sessionId);
+    const { session, product, pdfPath } = await getVerifiedCheckoutSession(req.params.sessionId);
+    const token = typeof req.query.token === 'string' ? req.query.token : '';
+
+    if (!token || !isValidDownloadToken(session.id, product.id, token)) {
+      return res.status(403).json({ error: 'This download link is invalid or expired.' });
+    }
+
     res.download(pdfPath, product.pdfName || path.basename(pdfPath));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to download file.';

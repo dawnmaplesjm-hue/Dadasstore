@@ -34,10 +34,12 @@ const getApiBaseCandidates = () => {
   return Array.from(new Set(candidates));
 };
 
+const apiBaseCandidates = getApiBaseCandidates();
+
 const fetchFromApi = async (path: string, init?: RequestInit) => {
   let lastError: unknown = null;
 
-  for (const baseUrl of getApiBaseCandidates()) {
+  for (const baseUrl of apiBaseCandidates) {
     try {
       const response = await fetch(`${baseUrl}${path}`, {
         cache: 'no-store',
@@ -54,7 +56,9 @@ const fetchFromApi = async (path: string, init?: RequestInit) => {
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error('Unable to reach the store backend.');
+  const attemptedHosts = apiBaseCandidates.join(', ');
+  const details = lastError instanceof Error ? lastError.message : 'Unknown network error.';
+  throw new Error(`Unable to reach the store backend. Tried: ${attemptedHosts}. Last error: ${details}`);
 };
 
 const getAdminPanelUrl = () => {

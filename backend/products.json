@@ -5,5 +5,12 @@
     "price": 9.99,
     "pdfUrl": "/uploads/1783132139833-EMBRACCELIFEREVISED.pdf",
     "pdfName": "EMBRACCELIFEREVISED.pdf"
+  },
+  {
+    "id": 2,
+    "title": "Understanding anxiety",
+    "price": 9.99,
+    "pdfUrl": "/uploads/1783132779957-UNDERSTANDINGANXIETY.pdf",
+    "pdfName": "UNDERSTANDINGANXIETY.pdf"
   }
 ]

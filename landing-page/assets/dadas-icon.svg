@@ -1,0 +1,23 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a0050"/>
+      <stop offset="1" stop-color="#0d2e66"/>
+    </linearGradient>
+    <linearGradient id="txt" x1="178" y1="512" x2="850" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f8bff"/>
+      <stop offset="0.52" stop-color="#ee47ff"/>
+      <stop offset="1" stop-color="#1de2c7"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <!-- Stylized D shape (top segment) -->
+  <path d="M227 188H420C571 188 694 311 694 462H510C510 412 470 372 420 372H227V188Z" fill="#F2F2F5"/>
+
+  <!-- Stylized D shape (bottom segment) -->
+  <path d="M262 559H446V754C496 754 536 714 536 664H721C721 815 598 938 446 938H262V559Z" fill="#F2F2F5"/>
+
+  <text x="178" y="533" fill="url(#txt)" font-size="56" font-family="Segoe UI, Arial, sans-serif" letter-spacing="1.5">dadas digital products</text>
+</svg>

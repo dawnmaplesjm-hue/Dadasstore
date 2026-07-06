@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Product = {
   id: number;
@@ -77,6 +77,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const adminPressTimer = useRef<number | null>(null);
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
   const adminPanelUrl = getAdminPanelUrl();
@@ -241,6 +242,24 @@ export default function App() {
     window.open(adminPanelUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const startAdminPress = () => {
+    if (adminPressTimer.current) {
+      window.clearTimeout(adminPressTimer.current);
+    }
+
+    adminPressTimer.current = window.setTimeout(() => {
+      openAdminPanel();
+      adminPressTimer.current = null;
+    }, 1200);
+  };
+
+  const stopAdminPress = () => {
+    if (adminPressTimer.current) {
+      window.clearTimeout(adminPressTimer.current);
+      adminPressTimer.current = null;
+    }
+  };
+
   const openProductDetails = (product: Product) => {
     setSelectedProduct(product);
   };
@@ -283,12 +302,17 @@ export default function App() {
     <div className="store-shell">
       <main className="store-phone">
         <header className="top-row">
-          <div>
+          <div
+            className="brand-block"
+            onPointerDown={startAdminPress}
+            onPointerUp={stopAdminPress}
+            onPointerLeave={stopAdminPress}
+            onPointerCancel={stopAdminPress}
+          >
             <p className="overline">Digital Store</p>
             <h1>Dada Downloads</h1>
           </div>
           <div className="top-actions">
-            <button className="icon-pill" type="button" onClick={openAdminPanel}>Admin</button>
             <button className="icon-pill" type="button" onClick={() => void refreshStore()}>Refresh</button>
           </div>
         </header>

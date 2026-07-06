@@ -306,8 +306,8 @@ export default function App() {
             className="brand-block"
             onPointerDown={startAdminPress}
             onPointerUp={stopAdminPress}
-            onPointerLeave={stopAdminPress}
             onPointerCancel={stopAdminPress}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <p className="overline">Digital Store</p>
             <h1>Dada Downloads</h1>

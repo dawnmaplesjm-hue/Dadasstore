@@ -17,6 +17,14 @@ body {
   background: inherit;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 button,
 a {
   font: inherit;
@@ -32,6 +40,8 @@ a {
 
 .store-shell {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   padding: 24px 14px;
   display: flex;
   justify-content: center;
@@ -64,6 +74,7 @@ a {
 
 .store-phone {
   width: min(100%, 430px);
+  max-width: 100%;
   border-radius: 34px;
   background: linear-gradient(180deg, rgba(28, 2, 54, 0.96), rgba(35, 6, 75, 0.95) 52%, rgba(8, 56, 94, 0.93));
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -83,6 +94,10 @@ a {
   gap: 10px;
 }
 
+.brand-block {
+  min-width: 0;
+}
+
 .top-actions {
   display: flex;
   align-items: center;
@@ -94,6 +109,7 @@ a {
   font-size: 1.5rem;
   line-height: 1.1;
   color: #f7b732;
+  overflow-wrap: anywhere;
 }
 
 .overline {
@@ -341,6 +357,11 @@ a {
   gap: 12px;
   padding: 10px;
   cursor: pointer;
+  min-width: 0;
+}
+
+.product-copy {
+  min-width: 0;
 }
 
 .thumb-block {
@@ -378,12 +399,14 @@ a {
 .product-copy h3 {
   margin: 0 0 4px;
   font-size: 0.98rem;
+  overflow-wrap: anywhere;
 }
 
 .product-copy p {
   margin: 0;
   color: rgba(236, 224, 255, 0.7);
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 
 .meta-row {
@@ -409,6 +432,7 @@ a {
   justify-content: space-between;
   gap: 10px;
   margin-top: 10px;
+  min-width: 0;
 }
 
 .product-row strong {
@@ -443,6 +467,12 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+}
+
+.coming-item > div,
+.history-item > div {
+  min-width: 0;
 }
 
 .coming-item strong,

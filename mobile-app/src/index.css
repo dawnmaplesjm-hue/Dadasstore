@@ -172,6 +172,24 @@ a {
   align-items: center;
 }
 
+.store-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.benefit-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1e7ff;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
 .search-strip input {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -354,14 +372,19 @@ a {
 
 .product-card {
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08));
   display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 12px;
-  padding: 10px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 12px;
   cursor: pointer;
   min-width: 0;
+}
+
+.product-card:hover {
+  border-color: rgba(247, 183, 50, 0.55);
+  box-shadow: 0 14px 28px rgba(14, 6, 36, 0.45);
 }
 
 .product-copy {
@@ -380,11 +403,16 @@ a {
   padding: 8px;
 }
 
+.product-media {
+  min-height: 124px;
+  padding: 0;
+  overflow: hidden;
+}
+
 .thumb-image {
   width: 100%;
   height: 100%;
-  max-height: 96px;
-  border-radius: 10px;
+  min-height: 124px;
   object-fit: cover;
 }
 
@@ -402,15 +430,29 @@ a {
 
 .product-copy h3 {
   margin: 0 0 4px;
-  font-size: 0.98rem;
+  font-size: 1.02rem;
   overflow-wrap: anywhere;
 }
 
 .product-copy p {
   margin: 0;
-  color: rgba(236, 224, 255, 0.7);
-  font-size: 0.78rem;
+  color: rgba(236, 224, 255, 0.8);
+  font-size: 0.82rem;
   overflow-wrap: anywhere;
+}
+
+.product-content {
+  display: grid;
+  gap: 7px;
+}
+
+.product-kicker {
+  margin: 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(247, 183, 50, 0.95);
+  font-weight: 700;
 }
 
 .meta-row {
@@ -441,7 +483,7 @@ a {
 
 .product-row strong {
   color: #ffffff;
-  font-size: 1rem;
+  font-size: 1.08rem;
 }
 
 .buy-button {
@@ -450,8 +492,8 @@ a {
   background: linear-gradient(120deg, #f53fff 0%, #be10ff 100%);
   color: #fff;
   font-weight: 700;
-  font-size: 0.78rem;
-  padding: 8px 16px;
+  font-size: 0.82rem;
+  padding: 9px 17px;
   box-shadow: 0 9px 18px rgba(190, 16, 255, 0.42);
 }
 
@@ -577,8 +619,9 @@ a {
     padding: 12px;
   }
 
-  .product-card {
-    grid-template-columns: 64px 1fr;
+  .product-media,
+  .thumb-image {
+    min-height: 112px;
   }
 
   .top-row h1 {

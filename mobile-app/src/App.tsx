@@ -351,9 +351,15 @@ export default function App() {
         </header>
 
         <section className="promo-banner">
-          <p className="overline">New Release</p>
+          <p className="overline">Featured Product</p>
           <h2>{storeSettings.newReleaseTitle}</h2>
           <p>{storeSettings.newReleaseMessage}</p>
+        </section>
+
+        <section className="store-benefits" aria-label="Store benefits">
+          <span className="benefit-pill">Instant download</span>
+          <span className="benefit-pill">Secure checkout</span>
+          <span className="benefit-pill">Mobile ready</span>
         </section>
 
         <section className="search-strip">
@@ -399,8 +405,8 @@ export default function App() {
         {activeList === 'buy' && (
           <section className="section-card">
           <div className="section-head">
-            <h2>Buy Now</h2>
-            <span>{filteredProducts.length} ready now</span>
+            <h2>Shop Products</h2>
+            <span>{filteredProducts.length} available now</span>
           </div>
 
           {loading ? (
@@ -423,7 +429,7 @@ export default function App() {
                     }
                   }}
                 >
-                  <div className="thumb-block" aria-hidden="true">
+                  <div className="thumb-block product-media" aria-hidden="true">
                     {product.imageUrl ? (
                       <img
                         className="thumb-image"
@@ -437,7 +443,8 @@ export default function App() {
                       </>
                     )}
                   </div>
-                  <div className="product-copy">
+                  <div className="product-copy product-content">
+                    <p className="product-kicker">Digital Download</p>
                     <h3>{product.title}</h3>
                     <p>{product.description || product.pdfName || 'Instant download after payment.'}</p>
                     <div className="meta-row">

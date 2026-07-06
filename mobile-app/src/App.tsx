@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Product = {
   id: number;
@@ -76,6 +76,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
+  const [sortBy, setSortBy] = useState<'featured' | 'price-low' | 'price-high' | 'name'>('featured');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const adminPressStartedAt = useRef<number | null>(null);
   const adminPressHandled = useRef(false);
@@ -240,6 +241,29 @@ export default function App() {
     return searchableText.includes(searchValue);
   });
 
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts];
+
+    if (sortBy === 'price-low') {
+      sorted.sort((a, b) => a.price - b.price);
+      return sorted;
+    }
+
+    if (sortBy === 'price-high') {
+      sorted.sort((a, b) => b.price - a.price);
+      return sorted;
+    }
+
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+      return sorted;
+    }
+
+    return sorted;
+  }, [filteredProducts, sortBy]);
+
+  const featuredProduct = sortedProducts[0] ?? null;
+
   const openAdminPanel = () => {
     const runtimeWindow = window as Window & {
       Capacitor?: {
@@ -370,6 +394,16 @@ export default function App() {
             placeholder="Search digital products"
             aria-label="Search digital products"
           />
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as 'featured' | 'price-low' | 'price-high' | 'name')}
+            aria-label="Sort products"
+          >
+            <option value="featured">Sort: Featured</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="name">Name: A to Z</option>
+          </select>
         </section>
 
         {error && <div className="status error">{error}</div>}
@@ -406,16 +440,44 @@ export default function App() {
           <section className="section-card">
           <div className="section-head">
             <h2>Shop Products</h2>
-            <span>{filteredProducts.length} available now</span>
+            <span>{sortedProducts.length} available now</span>
           </div>
+
+          {featuredProduct && (
+            <article className="featured-product">
+              <div className="featured-copy">
+                <p className="product-kicker">Featured pick</p>
+                <h3>{featuredProduct.title}</h3>
+                <p>{featuredProduct.description || featuredProduct.pdfName || 'Instant download after payment.'}</p>
+                <div className="featured-actions">
+                  <strong>${featuredProduct.price.toFixed(2)}</strong>
+                  <button className="buy-button" type="button" onClick={() => void startCheckout(featuredProduct.id)}>
+                    Buy Featured
+                  </button>
+                </div>
+              </div>
+              {featuredProduct.imageUrl ? (
+                <img
+                  className="featured-image"
+                  src={`${configuredApiBaseUrl}${featuredProduct.imageUrl}`}
+                  alt={featuredProduct.title}
+                />
+              ) : (
+                <div className="featured-image featured-fallback" aria-hidden="true">
+                  <span>Featured</span>
+                  <span>Digital Product</span>
+                </div>
+              )}
+            </article>
+          )}
 
           {loading ? (
             <p className="muted">Loading products...</p>
-          ) : filteredProducts.length === 0 ? (
+          ) : sortedProducts.length === 0 ? (
             <p className="muted">No products match your search.</p>
           ) : (
             <div className="product-grid">
-              {filteredProducts.map((product) => (
+              {sortedProducts.map((product) => (
                 <article
                   className="product-card"
                   key={product.id}
@@ -445,6 +507,7 @@ export default function App() {
                   </div>
                   <div className="product-copy product-content">
                     <p className="product-kicker">Digital Download</p>
+                    <p className="card-badge">Best Seller</p>
                     <h3>{product.title}</h3>
                     <p>{product.description || product.pdfName || 'Instant download after payment.'}</p>
                     <div className="meta-row">

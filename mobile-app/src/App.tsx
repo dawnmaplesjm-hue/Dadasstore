@@ -77,11 +77,13 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const adminPressTimer = useRef<number | null>(null);
+  const adminPressStartedAt = useRef<number | null>(null);
+  const adminPressHandled = useRef(false);
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
   const adminPanelUrl = getAdminPanelUrl();
   const refreshIntervalMs = 5000;
+  const adminLongPressMs = 1200;
 
   const getSessionId = () => new URLSearchParams(window.location.search).get('session_id') || '';
 
@@ -239,25 +241,53 @@ export default function App() {
   });
 
   const openAdminPanel = () => {
-    window.open(adminPanelUrl, '_blank', 'noopener,noreferrer');
+    const runtimeWindow = window as Window & {
+      Capacitor?: {
+        isNativePlatform?: () => boolean;
+      };
+    };
+
+    const isNativeApp = runtimeWindow.Capacitor?.isNativePlatform?.() ?? false;
+
+    // In native WebView, delayed window.open can be blocked. Navigate directly instead.
+    if (isNativeApp) {
+      window.location.assign(adminPanelUrl);
+      return;
+    }
+
+    const openedWindow = window.open(adminPanelUrl, '_blank', 'noopener,noreferrer');
+
+    if (!openedWindow) {
+      window.location.assign(adminPanelUrl);
+    }
   };
 
   const startAdminPress = () => {
-    if (adminPressTimer.current) {
-      window.clearTimeout(adminPressTimer.current);
+    if (adminPressStartedAt.current !== null) {
+      return;
     }
 
-    adminPressTimer.current = window.setTimeout(() => {
-      openAdminPanel();
-      adminPressTimer.current = null;
-    }, 1200);
+    adminPressStartedAt.current = Date.now();
+    adminPressHandled.current = false;
   };
 
-  const stopAdminPress = () => {
-    if (adminPressTimer.current) {
-      window.clearTimeout(adminPressTimer.current);
-      adminPressTimer.current = null;
+  const finishAdminPress = () => {
+    if (adminPressStartedAt.current === null) {
+      return;
     }
+
+    const elapsedMs = Date.now() - adminPressStartedAt.current;
+    adminPressStartedAt.current = null;
+
+    if (elapsedMs >= adminLongPressMs && !adminPressHandled.current) {
+      adminPressHandled.current = true;
+      openAdminPanel();
+    }
+  };
+
+  const cancelAdminPress = () => {
+    adminPressStartedAt.current = null;
+    adminPressHandled.current = false;
   };
 
   const openProductDetails = (product: Product) => {
@@ -304,9 +334,12 @@ export default function App() {
         <header className="top-row">
           <div
             className="brand-block"
+            onTouchStart={startAdminPress}
+            onTouchEnd={finishAdminPress}
+            onTouchCancel={cancelAdminPress}
             onPointerDown={startAdminPress}
-            onPointerUp={stopAdminPress}
-            onPointerCancel={stopAdminPress}
+            onPointerUp={finishAdminPress}
+            onPointerCancel={cancelAdminPress}
             onContextMenu={(event) => event.preventDefault()}
           >
             <p className="overline">Digital Store</p>

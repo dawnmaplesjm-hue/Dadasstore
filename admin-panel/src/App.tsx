@@ -5,6 +5,7 @@ type Product = {
   title: string;
   price: number;
   description?: string;
+  isBestSeller?: boolean;
   pdfUrl?: string;
   pdfName?: string;
   imageUrl?: string;
@@ -38,12 +39,14 @@ export default function App() {
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+  const [isBestSeller, setIsBestSeller] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editPrice, setEditPrice] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editIsBestSeller, setEditIsBestSeller] = useState(false);
   const [editPdfFile, setEditPdfFile] = useState<File | null>(null);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [error, setError] = useState('');
@@ -219,6 +222,7 @@ export default function App() {
               formData.append('title', title.trim());
               formData.append('price', String(parsedPrice));
               formData.append('description', description.trim());
+              formData.append('isBestSeller', String(isBestSeller));
               formData.append('pdf', pdfFile);
               if (imageFile) {
                 formData.append('image', imageFile);
@@ -229,7 +233,12 @@ export default function App() {
         : await fetch(`${configuredApiBaseUrl}/api/products`, {
             method: 'POST',
             headers: getJsonAuthHeaders(),
-            body: JSON.stringify({ title: title.trim(), price: parsedPrice, description: description.trim() })
+            body: JSON.stringify({
+              title: title.trim(),
+              price: parsedPrice,
+              description: description.trim(),
+              isBestSeller
+            })
           });
 
       if (!response.ok) {
@@ -246,6 +255,7 @@ export default function App() {
       setTitle('');
       setPrice('');
       setDescription('');
+      setIsBestSeller(false);
       setPdfFile(null);
       setImageFile(null);
     } catch {
@@ -293,6 +303,7 @@ export default function App() {
     setEditTitle(product.title);
     setEditPrice(String(product.price));
     setEditDescription(product.description || '');
+    setEditIsBestSeller(Boolean(product.isBestSeller));
     setEditPdfFile(null);
     setEditImageFile(null);
   };
@@ -302,8 +313,38 @@ export default function App() {
     setEditTitle('');
     setEditPrice('');
     setEditDescription('');
+    setEditIsBestSeller(false);
     setEditPdfFile(null);
     setEditImageFile(null);
+  };
+
+  const toggleBestSeller = async (product: Product) => {
+    if (!authToken) {
+      setError('Please login as admin to edit products.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/products/${product.id}`, {
+        method: 'PUT',
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({ isBestSeller: !Boolean(product.isBestSeller) })
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to update best seller status.');
+        setError(message);
+        if (response.status === 401) {
+          clearSession();
+        }
+        return;
+      }
+
+      const updatedProduct = await response.json();
+      setProducts((current) => current.map((item) => (item.id === product.id ? { ...item, ...updatedProduct } : item)));
+    } catch {
+      setError('Unable to reach the server. Please check your backend URL and network.');
+    }
   };
 
   const saveEditing = async (id: number) => {
@@ -330,6 +371,7 @@ export default function App() {
               formData.append('title', editTitle.trim());
               formData.append('price', String(parsedPrice));
               formData.append('description', editDescription.trim());
+              formData.append('isBestSeller', String(editIsBestSeller));
               if (editPdfFile) {
                 formData.append('pdf', editPdfFile);
               }
@@ -342,7 +384,12 @@ export default function App() {
         : await fetch(`${configuredApiBaseUrl}/api/products/${id}`, {
             method: 'PUT',
             headers: getJsonAuthHeaders(),
-            body: JSON.stringify({ title: editTitle.trim(), price: parsedPrice, description: editDescription.trim() })
+            body: JSON.stringify({
+              title: editTitle.trim(),
+              price: parsedPrice,
+              description: editDescription.trim(),
+              isBestSeller: editIsBestSeller
+            })
           });
 
       if (!response.ok) {
@@ -523,6 +570,14 @@ export default function App() {
                 onChange={(event) => setDescription(event.target.value)}
                 rows={3}
               />
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={isBestSeller}
+                  onChange={(event) => setIsBestSeller(event.target.checked)}
+                />
+                <span>Mark as Best Seller</span>
+              </label>
               <label className="file-picker">
                 <span>{imageFile ? imageFile.name : 'Choose product image (optional)'}</span>
                 <input
@@ -581,6 +636,14 @@ export default function App() {
                           placeholder="Short product description"
                           rows={3}
                         />
+                        <label className="checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={editIsBestSeller}
+                            onChange={(event) => setEditIsBestSeller(event.target.checked)}
+                          />
+                          <span>Best Seller</span>
+                        </label>
                         <label className="file-picker edit-file-picker">
                           <span>{editImageFile ? editImageFile.name : 'Replace image (optional)'}</span>
                           <input
@@ -611,6 +674,7 @@ export default function App() {
                         <div>
                           <strong>{product.title}</strong>
                           <div className="product-price">${product.price.toFixed(2)}</div>
+                          {product.isBestSeller && <p className="product-badge">Best Seller</p>}
                           {product.description && <p className="product-description">{product.description}</p>}
                           {product.imageUrl && (
                             <img
@@ -628,6 +692,9 @@ export default function App() {
                           )}
                           <button className="muted-button" onClick={() => startEditing(product)}>
                             Edit
+                          </button>
+                          <button className="muted-button" onClick={() => void toggleBestSeller(product)}>
+                            {product.isBestSeller ? 'Remove Best Seller' : 'Mark Best Seller'}
                           </button>
                           <button className="danger-button" onClick={() => handleDelete(product.id)}>
                             Delete

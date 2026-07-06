@@ -5,6 +5,7 @@ type Product = {
   title: string;
   price: number;
   description?: string;
+  isBestSeller?: boolean;
   pdfUrl?: string;
   pdfName?: string;
   imageUrl?: string;
@@ -555,7 +556,7 @@ export default function App() {
                   </div>
                   <div className="product-copy product-content">
                     <p className="product-kicker">{storeSettings.cardKickerText}</p>
-                    <p className="card-badge">{storeSettings.cardBadgeText}</p>
+                    {product.isBestSeller && <p className="card-badge">{storeSettings.cardBadgeText}</p>}
                     <h3>{product.title}</h3>
                     <p className="product-summary">{getCardSummary(product)}</p>
                     <div className="meta-row">

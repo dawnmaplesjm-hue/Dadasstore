@@ -98,8 +98,8 @@ function requireAdminAuth(req, res, next) {
     next();
 }
 const defaultProducts = [
-    { id: 1, title: 'Math Ebook', price: 9.99, description: 'A beginner-friendly math ebook.', pdfUrl: '' },
-    { id: 2, title: 'Science Worksheet', price: 4.99, description: 'Printable science worksheet for learners.', pdfUrl: '' }
+    { id: 1, title: 'Math Ebook', price: 9.99, description: 'A beginner-friendly math ebook.', isBestSeller: false, pdfUrl: '' },
+    { id: 2, title: 'Science Worksheet', price: 4.99, description: 'Printable science worksheet for learners.', isBestSeller: false, pdfUrl: '' }
 ];
 const defaultStoreSettings = {
     newReleaseTitle: 'Premium digital bundle',
@@ -122,6 +122,16 @@ function sanitizeStoreText(value, fallback) {
     }
     const trimmed = value.trim();
     return trimmed || fallback;
+}
+function parseIsBestSeller(input) {
+    if (typeof input === 'boolean') {
+        return input;
+    }
+    if (typeof input === 'string') {
+        const normalized = input.trim().toLowerCase();
+        return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
+    }
+    return false;
 }
 function loadProducts() {
     if (!fs_1.default.existsSync(dataFilePath)) {
@@ -516,7 +526,7 @@ app.get('/api/checkout/download/:sessionId', async (req, res) => {
 });
 // POST /api/products accepts a new product and returns it
 app.post('/api/products', requireAdminAuth, (req, res) => {
-    const { title, price, description } = req.body;
+    const { title, price, description, isBestSeller } = req.body;
     // Basic validation for learning purposes
     if (!title || typeof title !== 'string' || !price || typeof price !== 'number') {
         return res.status(400).json({
@@ -528,6 +538,7 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
         title,
         price,
         description: typeof description === 'string' ? description.trim() : '',
+        isBestSeller: parseIsBestSeller(isBestSeller),
         pdfUrl: ''
     };
     products.push(newProduct);
@@ -536,7 +547,7 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
 });
 // POST /api/products/upload accepts a PDF file and saves it with the product
 app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req, res) => {
-    const { title, price, description } = req.body;
+    const { title, price, description, isBestSeller } = req.body;
     const uploadedPdf = getUploadedFile(req, 'pdf');
     const uploadedImage = getUploadedFile(req, 'image');
     if (!title || typeof title !== 'string' || !price || Number.isNaN(Number(price))) {
@@ -552,6 +563,7 @@ app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req, re
         title: title.trim(),
         price: Number(price),
         description: typeof description === 'string' ? description.trim() : '',
+        isBestSeller: parseIsBestSeller(isBestSeller),
         pdfUrl: `/uploads/${uploadedPdf.filename}`,
         pdfName: uploadedPdf.originalname,
         imageUrl: uploadedImage ? `/uploads/${uploadedImage.filename}` : '',
@@ -564,7 +576,7 @@ app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req, re
 // PUT /api/products/:id updates a product by its ID
 app.put('/api/products/:id', requireAdminAuth, (req, res) => {
     const productId = Number(req.params.id);
-    const { title, price, description } = req.body;
+    const { title, price, description, isBestSeller } = req.body;
     if (Number.isNaN(productId)) {
         return res.status(400).json({ error: 'Product ID must be a number.' });
     }
@@ -581,13 +593,16 @@ app.put('/api/products/:id', requireAdminAuth, (req, res) => {
     if (typeof description === 'string') {
         product.description = description.trim();
     }
+    if (typeof isBestSeller === 'boolean') {
+        product.isBestSeller = isBestSeller;
+    }
     saveProducts(products);
     res.json(product);
 });
 // PUT /api/products/:id/upload updates product info and can replace the PDF file
 app.put('/api/products/:id/upload', requireAdminAuth, uploadProductAssets, (req, res) => {
     const productId = Number(req.params.id);
-    const { title, price, description } = req.body;
+    const { title, price, description, isBestSeller } = req.body;
     const uploadedPdf = getUploadedFile(req, 'pdf');
     const uploadedImage = getUploadedFile(req, 'image');
     if (Number.isNaN(productId)) {
@@ -605,6 +620,9 @@ app.put('/api/products/:id/upload', requireAdminAuth, uploadProductAssets, (req,
     }
     if (typeof description === 'string') {
         product.description = description.trim();
+    }
+    if (isBestSeller !== undefined) {
+        product.isBestSeller = parseIsBestSeller(isBestSeller);
     }
     if (uploadedPdf) {
         // Replace previous PDF file so the uploads folder stays clean.

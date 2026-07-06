@@ -267,6 +267,19 @@ a {
   margin-top: -4px;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(248, 241, 255, 0.9);
+  font-weight: 600;
+}
+
+.checkbox-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+}
+
 .primary-button,
 .danger-button,
 .save-button,
@@ -374,6 +387,20 @@ a {
 .product-price {
   margin-top: 4px;
   color: #f7b732;
+  font-weight: 700;
+}
+
+.product-badge {
+  margin: 8px 0 0;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 183, 50, 0.5);
+  background: rgba(247, 183, 50, 0.2);
+  color: #ffe8b0;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-weight: 700;
 }
 

@@ -13,6 +13,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const cors_1 = __importDefault(require("cors"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const crypto_1 = __importDefault(require("crypto"));
 const multer_1 = __importDefault(require("multer"));
 const stripe_1 = __importDefault(require("stripe"));
 // "import" = bring in code from other files
@@ -36,6 +37,7 @@ const port = process.env.PORT || 5000;
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@dadasstore.com';
 const adminPassword = process.env.ADMIN_PASSWORD || 'Love1877';
 const adminToken = process.env.ADMIN_TOKEN || 'dadasstore-dev-token';
+const downloadSecret = process.env.DOWNLOAD_SECRET || adminToken;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 const stripeCurrency = process.env.STRIPE_CURRENCY || 'usd';
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
@@ -50,14 +52,18 @@ app.use((0, cors_1.default)());
 // Without this, mobile app can't talk to backend
 // Store uploaded PDF files in a local folder.
 const backendRootDir = path_1.default.resolve(__dirname, '..');
-const uploadsDir = path_1.default.join(backendRootDir, 'uploads');
+const dataDir = process.env.DATA_DIR ? path_1.default.resolve(process.env.DATA_DIR) : backendRootDir;
+if (!fs_1.default.existsSync(dataDir)) {
+    fs_1.default.mkdirSync(dataDir, { recursive: true });
+}
+const uploadsDir = path_1.default.join(dataDir, 'uploads');
 if (!fs_1.default.existsSync(uploadsDir)) {
     fs_1.default.mkdirSync(uploadsDir, { recursive: true });
 }
 // Store product data in a local JSON file so it survives restarts.
-const dataFilePath = path_1.default.join(backendRootDir, 'products.json');
-const purchasesFilePath = path_1.default.join(backendRootDir, 'purchases.json');
-const storeSettingsFilePath = path_1.default.join(backendRootDir, 'store-settings.json');
+const dataFilePath = path_1.default.join(dataDir, 'products.json');
+const purchasesFilePath = path_1.default.join(dataDir, 'purchases.json');
+const storeSettingsFilePath = path_1.default.join(dataDir, 'store-settings.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
 const upload = (0, multer_1.default)({
@@ -97,8 +103,26 @@ const defaultProducts = [
 ];
 const defaultStoreSettings = {
     newReleaseTitle: 'Premium digital bundle',
-    newReleaseMessage: 'Buy once, download instantly, and access your files anytime.'
+    newReleaseMessage: 'Buy once, download instantly, and access your files anytime.',
+    featuredProductId: null,
+    featuredProductLabel: 'Featured pick',
+    cardBadgeText: 'Best Seller',
+    cardKickerText: 'Digital Download',
+    shopSectionTitle: 'Shop Products',
+    benefitOne: 'Instant download',
+    benefitTwo: 'Secure checkout',
+    benefitThree: 'Mobile ready',
+    detailsButtonText: 'View details',
+    buyButtonText: 'Buy now',
+    buyFeaturedButtonText: 'Buy Featured'
 };
+function sanitizeStoreText(value, fallback) {
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+    const trimmed = value.trim();
+    return trimmed || fallback;
+}
 function loadProducts() {
     if (!fs_1.default.existsSync(dataFilePath)) {
         return defaultProducts;
@@ -144,7 +168,40 @@ function loadStoreSettings() {
                 : defaultStoreSettings.newReleaseTitle,
             newReleaseMessage: typeof loadedSettings.newReleaseMessage === 'string'
                 ? loadedSettings.newReleaseMessage
-                : defaultStoreSettings.newReleaseMessage
+                : defaultStoreSettings.newReleaseMessage,
+            featuredProductId: typeof loadedSettings.featuredProductId === 'number'
+                ? loadedSettings.featuredProductId
+                : defaultStoreSettings.featuredProductId,
+            featuredProductLabel: typeof loadedSettings.featuredProductLabel === 'string'
+                ? loadedSettings.featuredProductLabel
+                : defaultStoreSettings.featuredProductLabel,
+            cardBadgeText: typeof loadedSettings.cardBadgeText === 'string'
+                ? loadedSettings.cardBadgeText
+                : defaultStoreSettings.cardBadgeText,
+            cardKickerText: typeof loadedSettings.cardKickerText === 'string'
+                ? loadedSettings.cardKickerText
+                : defaultStoreSettings.cardKickerText,
+            shopSectionTitle: typeof loadedSettings.shopSectionTitle === 'string'
+                ? loadedSettings.shopSectionTitle
+                : defaultStoreSettings.shopSectionTitle,
+            benefitOne: typeof loadedSettings.benefitOne === 'string'
+                ? loadedSettings.benefitOne
+                : defaultStoreSettings.benefitOne,
+            benefitTwo: typeof loadedSettings.benefitTwo === 'string'
+                ? loadedSettings.benefitTwo
+                : defaultStoreSettings.benefitTwo,
+            benefitThree: typeof loadedSettings.benefitThree === 'string'
+                ? loadedSettings.benefitThree
+                : defaultStoreSettings.benefitThree,
+            detailsButtonText: typeof loadedSettings.detailsButtonText === 'string'
+                ? loadedSettings.detailsButtonText
+                : defaultStoreSettings.detailsButtonText,
+            buyButtonText: typeof loadedSettings.buyButtonText === 'string'
+                ? loadedSettings.buyButtonText
+                : defaultStoreSettings.buyButtonText,
+            buyFeaturedButtonText: typeof loadedSettings.buyFeaturedButtonText === 'string'
+                ? loadedSettings.buyFeaturedButtonText
+                : defaultStoreSettings.buyFeaturedButtonText
         };
     }
     catch {
@@ -156,6 +213,12 @@ function saveProducts(productsToSave) {
 }
 function savePurchases(purchasesToSave) {
     fs_1.default.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
+}
+function createDownloadToken(sessionId, productId) {
+    return crypto_1.default.createHmac('sha256', downloadSecret).update(`${sessionId}:${productId}`).digest('hex');
+}
+function isValidDownloadToken(sessionId, productId, token) {
+    return createDownloadToken(sessionId, productId) === token;
 }
 function saveStoreSettings(settingsToSave) {
     fs_1.default.writeFileSync(storeSettingsFilePath, JSON.stringify(settingsToSave, null, 2), 'utf-8');
@@ -296,12 +359,26 @@ app.get('/api/store-settings', (_req, res) => {
 });
 // PUT /api/admin/store-settings updates storefront UI settings.
 app.put('/api/admin/store-settings', requireAdminAuth, (req, res) => {
-    const { newReleaseTitle, newReleaseMessage } = req.body;
-    if (typeof newReleaseTitle !== 'string' || typeof newReleaseMessage !== 'string') {
-        return res.status(400).json({ error: 'Please provide newReleaseTitle and newReleaseMessage as text.' });
+    const payload = req.body;
+    storeSettings.newReleaseTitle = sanitizeStoreText(payload.newReleaseTitle, defaultStoreSettings.newReleaseTitle);
+    storeSettings.newReleaseMessage = sanitizeStoreText(payload.newReleaseMessage, defaultStoreSettings.newReleaseMessage);
+    storeSettings.featuredProductLabel = sanitizeStoreText(payload.featuredProductLabel, defaultStoreSettings.featuredProductLabel);
+    storeSettings.cardBadgeText = sanitizeStoreText(payload.cardBadgeText, defaultStoreSettings.cardBadgeText);
+    storeSettings.cardKickerText = sanitizeStoreText(payload.cardKickerText, defaultStoreSettings.cardKickerText);
+    storeSettings.shopSectionTitle = sanitizeStoreText(payload.shopSectionTitle, defaultStoreSettings.shopSectionTitle);
+    storeSettings.benefitOne = sanitizeStoreText(payload.benefitOne, defaultStoreSettings.benefitOne);
+    storeSettings.benefitTwo = sanitizeStoreText(payload.benefitTwo, defaultStoreSettings.benefitTwo);
+    storeSettings.benefitThree = sanitizeStoreText(payload.benefitThree, defaultStoreSettings.benefitThree);
+    storeSettings.detailsButtonText = sanitizeStoreText(payload.detailsButtonText, defaultStoreSettings.detailsButtonText);
+    storeSettings.buyButtonText = sanitizeStoreText(payload.buyButtonText, defaultStoreSettings.buyButtonText);
+    storeSettings.buyFeaturedButtonText = sanitizeStoreText(payload.buyFeaturedButtonText, defaultStoreSettings.buyFeaturedButtonText);
+    if (payload.featuredProductId === null) {
+        storeSettings.featuredProductId = null;
     }
-    storeSettings.newReleaseTitle = newReleaseTitle.trim() || defaultStoreSettings.newReleaseTitle;
-    storeSettings.newReleaseMessage = newReleaseMessage.trim() || defaultStoreSettings.newReleaseMessage;
+    else if (typeof payload.featuredProductId === 'number' && Number.isInteger(payload.featuredProductId)) {
+        const hasProduct = products.some((product) => product.id === payload.featuredProductId);
+        storeSettings.featuredProductId = hasProduct ? payload.featuredProductId : null;
+    }
     saveStoreSettings(storeSettings);
     res.json(storeSettings);
 });
@@ -371,7 +448,7 @@ app.post('/api/checkout/create-session', async (req, res) => {
     try {
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
-            success_url: `${requestOrigin}/?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${requestOrigin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${requestOrigin}/?canceled=true`,
             metadata: { productId: String(product.id) },
             line_items: [
@@ -402,11 +479,13 @@ app.get('/api/checkout/session/:sessionId', async (req, res) => {
     try {
         const { session, product } = await getVerifiedCheckoutSession(req.params.sessionId);
         recordPurchase(session.id, product, session.customer_details?.email || session.customer_email || undefined);
+        const downloadToken = createDownloadToken(session.id, product.id);
         res.json({
             sessionId: session.id,
             productId: product.id,
             productTitle: product.title,
-            downloadUrl: `/api/checkout/download/${session.id}`
+            downloadToken,
+            downloadUrl: `/api/checkout/download/${session.id}?token=${downloadToken}`
         });
     }
     catch (error) {
@@ -423,7 +502,11 @@ app.get('/api/purchases/recent', (req, res) => {
 // GET /api/checkout/download/:sessionId streams the PDF after payment is verified.
 app.get('/api/checkout/download/:sessionId', async (req, res) => {
     try {
-        const { pdfPath, product } = await getVerifiedCheckoutSession(req.params.sessionId);
+        const { session, product, pdfPath } = await getVerifiedCheckoutSession(req.params.sessionId);
+        const token = typeof req.query.token === 'string' ? req.query.token : '';
+        if (!token || !isValidDownloadToken(session.id, product.id, token)) {
+            return res.status(403).json({ error: 'This download link is invalid or expired.' });
+        }
         res.download(pdfPath, product.pdfName || path_1.default.basename(pdfPath));
     }
     catch (error) {

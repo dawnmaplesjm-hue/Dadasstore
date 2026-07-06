@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Free Meditation Guide | Dada Digital Products</title>
+    <meta
+      name="description"
+      content="Free meditation guide for focus, calm, and resetting your day."
+    />
+    <link rel="icon" type="image/svg+xml" href="assets/dadas-icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-wrap">
+      <header class="topbar reveal">
+        <div class="brand">
+          <img class="brand-mark" src="assets/dadas-icon.svg" alt="Dada Digital Products icon" />
+          <span>Dada<span>Digital Products</span></span>
+        </div>
+        <nav class="top-links" aria-label="Quick links">
+          <a class="pill-link" href="index.html">Back Home</a>
+          <a class="pill-link" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">Open Store</a>
+        </nav>
+      </header>
+
+      <section class="hero hero-layout">
+        <article class="hero-copy reveal delay-1">
+          <p class="kicker">Free Meditation Guide</p>
+          <div class="brand-hero">
+            <img class="brand-mark brand-mark-large" src="assets/dadas-icon.svg" alt="Dada Digital Products icon" />
+            <div>
+              <p class="brand-eyebrow">Calm, Focus, Reset</p>
+              <h1>
+                Your free meditation guide is ready.
+                <span class="shine">Take a breath and start here.</span>
+              </h1>
+            </div>
+          </div>
+          <p>
+            A simple guide to help you slow down, refocus, and reset your mind in a few minutes each day.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">
+              Go To The Store
+            </a>
+            <a class="btn btn-secondary" href="index.html">Explore Products</a>
+          </div>
+        </article>
+
+        <aside class="hero-panel reveal delay-2" aria-label="Guide highlights">
+          <div class="stat stat-accent">
+            <strong>5 Minutes</strong>
+            <span>Easy reset routine for busy days</span>
+          </div>
+          <div class="stat">
+            <strong>Breathing</strong>
+            <span>Simple steps to settle your mind</span>
+          </div>
+          <div class="stat">
+            <strong>Focus</strong>
+            <span>Use before work, study, or bedtime</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section reveal delay-2">
+        <h2>What’s inside</h2>
+        <p>Short, practical guidance you can use right away.</p>
+        <div class="card-grid">
+          <article class="card">
+            <h3>Reset Routine</h3>
+            <p>A gentle start that helps you settle in just a few minutes.</p>
+          </article>
+          <article class="card">
+            <h3>Breathing Practice</h3>
+            <p>A simple pattern to bring calm and focus back into your day.</p>
+          </article>
+          <article class="card">
+            <h3>Mindset Note</h3>
+            <p>A small reminder to keep you centered when life gets busy.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta reveal delay-3">
+        <h2>Thank you for signing up.</h2>
+        <p>Use this guide anytime you want a quick pause and a clearer mind.</p>
+        <a class="btn btn-primary" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">
+          Shop More Digital Products
+        </a>
+      </section>
+
+      <footer class="footer">
+        <p>&copy; <span id="year"></span> Dada Digital Products. All rights reserved.</p>
+      </footer>
+    </div>
+
+    <script>
+      const yearEl = document.getElementById('year');
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear().toString();
+      }
+    </script>
+  </body>
+</html>

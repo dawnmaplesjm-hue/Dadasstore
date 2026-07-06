@@ -43,6 +43,10 @@ a {
   padding: 24px 18px 88px;
 }
 
+.hero-layout {
+  grid-template-columns: 1.05fr 0.95fr;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -69,6 +73,33 @@ a {
 
 .brand span {
   color: var(--accent);
+}
+
+.brand span span {
+  color: var(--ink);
+}
+
+.brand-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.brand-mark-large {
+  width: 74px;
+  height: 74px;
+  border-radius: 20px;
+  flex: 0 0 auto;
+}
+
+.brand-eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
 }
 
 .top-links {
@@ -179,6 +210,10 @@ a {
   align-content: center;
 }
 
+.stat-accent {
+  background: linear-gradient(135deg, rgba(239, 61, 248, 0.18), rgba(47, 115, 255, 0.12));
+}
+
 .stat {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -220,6 +255,44 @@ a {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.portfolio-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.portfolio-label {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0e1322;
+  background: linear-gradient(120deg, #f7b732, #ffd46f);
+  font-weight: 700;
+}
+
+.portfolio-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.portfolio-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .card {
@@ -288,6 +361,63 @@ a {
   text-align: center;
 }
 
+.guide-cta {
+  display: grid;
+  grid-template-columns: 1fr 0.9fr;
+  gap: 16px;
+  text-align: left;
+}
+
+.guide-panel,
+.guide-preview {
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(10, 16, 28, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.signup-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.signup-form input {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.signup-form input::placeholder {
+  color: rgba(236, 243, 255, 0.58);
+}
+
+.guide-note {
+  margin-top: 12px;
+  color: #d8e4f5;
+  font-size: 0.88rem;
+}
+
+.guide-preview h3 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+
+.guide-preview ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.guide-preview li + li {
+  margin-top: 2px;
+}
+
 .cta h2 {
   margin: 0;
   font-size: clamp(1.4rem, 2.8vw, 2rem);
@@ -332,6 +462,14 @@ a {
   .steps {
     grid-template-columns: 1fr 1fr;
   }
+
+  .guide-cta {
+    grid-template-columns: 1fr;
+  }
+
+  .signup-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 620px) {
@@ -358,6 +496,10 @@ a {
 
   .card-grid,
   .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-grid {
     grid-template-columns: 1fr;
   }
 }

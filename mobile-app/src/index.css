@@ -505,6 +505,11 @@ a {
   overflow-wrap: anywhere;
 }
 
+.product-summary {
+  color: rgba(236, 224, 255, 0.74);
+  font-size: 0.78rem;
+}
+
 .product-content {
   display: grid;
   gap: 7px;
@@ -559,6 +564,10 @@ a {
   min-width: 0;
 }
 
+.card-actions {
+  flex-wrap: wrap;
+}
+
 .product-row strong {
   color: #ffffff;
   font-size: 1.08rem;
@@ -573,6 +582,16 @@ a {
   font-size: 0.82rem;
   padding: 9px 17px;
   box-shadow: 0 9px 18px rgba(190, 16, 255, 0.42);
+}
+
+.details-button {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 8px 14px;
 }
 
 .coming-list,
@@ -651,6 +670,30 @@ a {
 .product-modal p {
   margin: 0;
   color: rgba(235, 222, 255, 0.82);
+}
+
+.modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.modal-section {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.modal-label {
+  margin: 0;
+  color: rgba(247, 183, 50, 0.96);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .modal-close {

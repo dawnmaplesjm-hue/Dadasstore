@@ -322,6 +322,18 @@ export default function App() {
     setSelectedProduct(null);
   };
 
+  const getCardSummary = (product: Product) => {
+    if (!product.description && !product.pdfName) {
+      return 'Tap View details to read the full description.';
+    }
+
+    return 'Tap View details to read the full description.';
+  };
+
+  const getFullDescription = (product: Product) => {
+    return product.description || product.pdfName || 'Instant digital product download.';
+  };
+
   if (purchaseResult && !checkingOut) {
     return (
       <div className="store-shell success-shell">
@@ -509,13 +521,23 @@ export default function App() {
                     <p className="product-kicker">Digital Download</p>
                     <p className="card-badge">Best Seller</p>
                     <h3>{product.title}</h3>
-                    <p>{product.description || product.pdfName || 'Instant download after payment.'}</p>
+                    <p className="product-summary">{getCardSummary(product)}</p>
                     <div className="meta-row">
                       <span className="meta-chip">Instant Access</span>
                       <span className="meta-chip">Secure Checkout</span>
                     </div>
-                    <div className="product-row">
+                    <div className="product-row card-actions">
                       <strong>${product.price.toFixed(2)}</strong>
+                      <button
+                        className="details-button"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openProductDetails(product);
+                        }}
+                      >
+                        View details
+                      </button>
                       <button
                         className="buy-button"
                         type="button"
@@ -577,7 +599,15 @@ export default function App() {
                 />
               )}
               <h3>{selectedProduct.title}</h3>
-              <p>{selectedProduct.description || selectedProduct.pdfName || 'Instant digital product download.'}</p>
+              <div className="modal-tags" aria-label="Product details">
+                <span className="meta-chip">Digital Product</span>
+                <span className="meta-chip">Instant Access</span>
+                <span className="meta-chip">Secure Checkout</span>
+              </div>
+              <div className="modal-section">
+                <p className="modal-label">Full description</p>
+                <p>{getFullDescription(selectedProduct)}</p>
+              </div>
               <div className="modal-row">
                 <strong>${selectedProduct.price.toFixed(2)}</strong>
                 <button

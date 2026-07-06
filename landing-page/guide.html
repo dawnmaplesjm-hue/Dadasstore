@@ -47,11 +47,17 @@
             A simple guide built to support calm, focus, and mental reset in just a few minutes.
           </p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">
-              Go To The Store
+            <a
+              class="btn btn-primary"
+              id="download-guide-btn"
+              href="assets/free-meditation-guide.txt"
+              download="free-meditation-guide.txt"
+            >
+              Download Free Guide
             </a>
             <a class="btn btn-secondary" href="index.html">Explore Products</a>
           </div>
+          <p class="guide-note" id="signup-note">Signup verified. Download starts from the button above.</p>
         </article>
 
         <aside class="hero-panel reveal delay-2" aria-label="Guide highlights">
@@ -90,10 +96,13 @@
       </section>
 
       <section class="cta reveal delay-3">
-        <h2>Signup complete.</h2>
-        <p>The guide can be used anytime for a short pause and clearer focus.</p>
-        <a class="btn btn-primary" href="https://dadasstore.pages.dev" target="_blank" rel="noopener noreferrer">
-          Shop More Digital Products
+        <h2>Guide delivery page</h2>
+        <p>
+          If the download did not start automatically, use the Download Free Guide button above.
+          The same file is also available with this direct link.
+        </p>
+        <a class="btn btn-primary" href="assets/free-meditation-guide.txt" download="free-meditation-guide.txt">
+          Direct Download Link
         </a>
       </section>
 
@@ -106,6 +115,27 @@
       const yearEl = document.getElementById('year');
       if (yearEl) {
         yearEl.textContent = new Date().getFullYear().toString();
+      }
+
+      const signupName = localStorage.getItem('dadas-signup-name') || '';
+      const signupEmail = localStorage.getItem('dadas-signup-email') || '';
+      const noteEl = document.getElementById('signup-note');
+      const downloadBtn = document.getElementById('download-guide-btn');
+      const alreadyAutoDownloaded = sessionStorage.getItem('dadas-guide-autodownloaded') === 'true';
+
+      if (noteEl && signupName) {
+        noteEl.textContent = `Thanks, ${signupName}. Download starts from the button above.`;
+      }
+
+      if (noteEl && !signupName && !signupEmail) {
+        noteEl.textContent = 'Download is available now. Use the button above to get the free guide.';
+      }
+
+      if (downloadBtn && signupEmail && !alreadyAutoDownloaded) {
+        sessionStorage.setItem('dadas-guide-autodownloaded', 'true');
+        setTimeout(() => {
+          downloadBtn.click();
+        }, 500);
       }
     </script>
   </body>

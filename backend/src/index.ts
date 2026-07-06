@@ -127,6 +127,17 @@ type Purchase = {
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
+  featuredProductId: number | null;
+  featuredProductLabel: string;
+  cardBadgeText: string;
+  cardKickerText: string;
+  shopSectionTitle: string;
+  benefitOne: string;
+  benefitTwo: string;
+  benefitThree: string;
+  detailsButtonText: string;
+  buyButtonText: string;
+  buyFeaturedButtonText: string;
 };
 
 function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
@@ -147,8 +158,28 @@ const defaultProducts: Product[] = [
 
 const defaultStoreSettings: StoreSettings = {
   newReleaseTitle: 'Premium digital bundle',
-  newReleaseMessage: 'Buy once, download instantly, and access your files anytime.'
+  newReleaseMessage: 'Buy once, download instantly, and access your files anytime.',
+  featuredProductId: null,
+  featuredProductLabel: 'Featured pick',
+  cardBadgeText: 'Best Seller',
+  cardKickerText: 'Digital Download',
+  shopSectionTitle: 'Shop Products',
+  benefitOne: 'Instant download',
+  benefitTwo: 'Secure checkout',
+  benefitThree: 'Mobile ready',
+  detailsButtonText: 'View details',
+  buyButtonText: 'Buy now',
+  buyFeaturedButtonText: 'Buy Featured'
 };
+
+function sanitizeStoreText(value: unknown, fallback: string) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
 
 function loadProducts(): Product[] {
   if (!fs.existsSync(dataFilePath)) {
@@ -203,7 +234,40 @@ function loadStoreSettings(): StoreSettings {
         : defaultStoreSettings.newReleaseTitle,
       newReleaseMessage: typeof loadedSettings.newReleaseMessage === 'string'
         ? loadedSettings.newReleaseMessage
-        : defaultStoreSettings.newReleaseMessage
+        : defaultStoreSettings.newReleaseMessage,
+      featuredProductId: typeof loadedSettings.featuredProductId === 'number'
+        ? loadedSettings.featuredProductId
+        : defaultStoreSettings.featuredProductId,
+      featuredProductLabel: typeof loadedSettings.featuredProductLabel === 'string'
+        ? loadedSettings.featuredProductLabel
+        : defaultStoreSettings.featuredProductLabel,
+      cardBadgeText: typeof loadedSettings.cardBadgeText === 'string'
+        ? loadedSettings.cardBadgeText
+        : defaultStoreSettings.cardBadgeText,
+      cardKickerText: typeof loadedSettings.cardKickerText === 'string'
+        ? loadedSettings.cardKickerText
+        : defaultStoreSettings.cardKickerText,
+      shopSectionTitle: typeof loadedSettings.shopSectionTitle === 'string'
+        ? loadedSettings.shopSectionTitle
+        : defaultStoreSettings.shopSectionTitle,
+      benefitOne: typeof loadedSettings.benefitOne === 'string'
+        ? loadedSettings.benefitOne
+        : defaultStoreSettings.benefitOne,
+      benefitTwo: typeof loadedSettings.benefitTwo === 'string'
+        ? loadedSettings.benefitTwo
+        : defaultStoreSettings.benefitTwo,
+      benefitThree: typeof loadedSettings.benefitThree === 'string'
+        ? loadedSettings.benefitThree
+        : defaultStoreSettings.benefitThree,
+      detailsButtonText: typeof loadedSettings.detailsButtonText === 'string'
+        ? loadedSettings.detailsButtonText
+        : defaultStoreSettings.detailsButtonText,
+      buyButtonText: typeof loadedSettings.buyButtonText === 'string'
+        ? loadedSettings.buyButtonText
+        : defaultStoreSettings.buyButtonText,
+      buyFeaturedButtonText: typeof loadedSettings.buyFeaturedButtonText === 'string'
+        ? loadedSettings.buyFeaturedButtonText
+        : defaultStoreSettings.buyFeaturedButtonText
     };
   } catch {
     return defaultStoreSettings;
@@ -403,14 +467,28 @@ app.get('/api/store-settings', (_req: Request, res: Response) => {
 
 // PUT /api/admin/store-settings updates storefront UI settings.
 app.put('/api/admin/store-settings', requireAdminAuth, (req: Request, res: Response) => {
-  const { newReleaseTitle, newReleaseMessage } = req.body;
+  const payload = req.body as Partial<StoreSettings>;
 
-  if (typeof newReleaseTitle !== 'string' || typeof newReleaseMessage !== 'string') {
-    return res.status(400).json({ error: 'Please provide newReleaseTitle and newReleaseMessage as text.' });
+  storeSettings.newReleaseTitle = sanitizeStoreText(payload.newReleaseTitle, defaultStoreSettings.newReleaseTitle);
+  storeSettings.newReleaseMessage = sanitizeStoreText(payload.newReleaseMessage, defaultStoreSettings.newReleaseMessage);
+  storeSettings.featuredProductLabel = sanitizeStoreText(payload.featuredProductLabel, defaultStoreSettings.featuredProductLabel);
+  storeSettings.cardBadgeText = sanitizeStoreText(payload.cardBadgeText, defaultStoreSettings.cardBadgeText);
+  storeSettings.cardKickerText = sanitizeStoreText(payload.cardKickerText, defaultStoreSettings.cardKickerText);
+  storeSettings.shopSectionTitle = sanitizeStoreText(payload.shopSectionTitle, defaultStoreSettings.shopSectionTitle);
+  storeSettings.benefitOne = sanitizeStoreText(payload.benefitOne, defaultStoreSettings.benefitOne);
+  storeSettings.benefitTwo = sanitizeStoreText(payload.benefitTwo, defaultStoreSettings.benefitTwo);
+  storeSettings.benefitThree = sanitizeStoreText(payload.benefitThree, defaultStoreSettings.benefitThree);
+  storeSettings.detailsButtonText = sanitizeStoreText(payload.detailsButtonText, defaultStoreSettings.detailsButtonText);
+  storeSettings.buyButtonText = sanitizeStoreText(payload.buyButtonText, defaultStoreSettings.buyButtonText);
+  storeSettings.buyFeaturedButtonText = sanitizeStoreText(payload.buyFeaturedButtonText, defaultStoreSettings.buyFeaturedButtonText);
+
+  if (payload.featuredProductId === null) {
+    storeSettings.featuredProductId = null;
+  } else if (typeof payload.featuredProductId === 'number' && Number.isInteger(payload.featuredProductId)) {
+    const hasProduct = products.some((product) => product.id === payload.featuredProductId);
+    storeSettings.featuredProductId = hasProduct ? payload.featuredProductId : null;
   }
 
-  storeSettings.newReleaseTitle = newReleaseTitle.trim() || defaultStoreSettings.newReleaseTitle;
-  storeSettings.newReleaseMessage = newReleaseMessage.trim() || defaultStoreSettings.newReleaseMessage;
   saveStoreSettings(storeSettings);
 
   res.json(storeSettings);

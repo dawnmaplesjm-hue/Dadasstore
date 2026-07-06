@@ -29,6 +29,17 @@ type PurchaseResult = {
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
+  featuredProductId: number | null;
+  featuredProductLabel: string;
+  cardBadgeText: string;
+  cardKickerText: string;
+  shopSectionTitle: string;
+  benefitOne: string;
+  benefitTwo: string;
+  benefitThree: string;
+  detailsButtonText: string;
+  buyButtonText: string;
+  buyFeaturedButtonText: string;
 };
 
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -68,7 +79,18 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     newReleaseTitle: 'Premium digital bundle',
-    newReleaseMessage: 'Buy once, download instantly, and access your files anytime.'
+    newReleaseMessage: 'Buy once, download instantly, and access your files anytime.',
+    featuredProductId: null,
+    featuredProductLabel: 'Featured pick',
+    cardBadgeText: 'Best Seller',
+    cardKickerText: 'Digital Download',
+    shopSectionTitle: 'Shop Products',
+    benefitOne: 'Instant download',
+    benefitTwo: 'Secure checkout',
+    benefitThree: 'Mobile ready',
+    detailsButtonText: 'View details',
+    buyButtonText: 'Buy now',
+    buyFeaturedButtonText: 'Buy Featured'
   });
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -126,7 +148,18 @@ export default function App() {
         .then((settings: StoreSettings) => {
           setStoreSettings({
             newReleaseTitle: settings.newReleaseTitle || 'Premium digital bundle',
-            newReleaseMessage: settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.'
+            newReleaseMessage: settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.',
+            featuredProductId: typeof settings.featuredProductId === 'number' ? settings.featuredProductId : null,
+            featuredProductLabel: settings.featuredProductLabel || 'Featured pick',
+            cardBadgeText: settings.cardBadgeText || 'Best Seller',
+            cardKickerText: settings.cardKickerText || 'Digital Download',
+            shopSectionTitle: settings.shopSectionTitle || 'Shop Products',
+            benefitOne: settings.benefitOne || 'Instant download',
+            benefitTwo: settings.benefitTwo || 'Secure checkout',
+            benefitThree: settings.benefitThree || 'Mobile ready',
+            detailsButtonText: settings.detailsButtonText || 'View details',
+            buyButtonText: settings.buyButtonText || 'Buy now',
+            buyFeaturedButtonText: settings.buyFeaturedButtonText || 'Buy Featured'
           });
         })
         .catch(() => {
@@ -262,7 +295,10 @@ export default function App() {
     return sorted;
   }, [filteredProducts, sortBy]);
 
-  const featuredProduct = sortedProducts[0] ?? null;
+  const featuredProduct =
+    (storeSettings.featuredProductId !== null
+      ? purchasableProducts.find((product) => product.id === storeSettings.featuredProductId) || null
+      : null) || sortedProducts[0] || null;
 
   const openAdminPanel = () => {
     const runtimeWindow = window as Window & {
@@ -393,9 +429,9 @@ export default function App() {
         </section>
 
         <section className="store-benefits" aria-label="Store benefits">
-          <span className="benefit-pill">Instant download</span>
-          <span className="benefit-pill">Secure checkout</span>
-          <span className="benefit-pill">Mobile ready</span>
+          <span className="benefit-pill">{storeSettings.benefitOne}</span>
+          <span className="benefit-pill">{storeSettings.benefitTwo}</span>
+          <span className="benefit-pill">{storeSettings.benefitThree}</span>
         </section>
 
         <section className="search-strip">
@@ -451,20 +487,20 @@ export default function App() {
         {activeList === 'buy' && (
           <section className="section-card">
           <div className="section-head">
-            <h2>Shop Products</h2>
+            <h2>{storeSettings.shopSectionTitle}</h2>
             <span>{sortedProducts.length} available now</span>
           </div>
 
           {featuredProduct && (
             <article className="featured-product">
               <div className="featured-copy">
-                <p className="product-kicker">Featured pick</p>
+                <p className="product-kicker">{storeSettings.featuredProductLabel}</p>
                 <h3>{featuredProduct.title}</h3>
                 <p>{featuredProduct.description || featuredProduct.pdfName || 'Instant download after payment.'}</p>
                 <div className="featured-actions">
                   <strong>${featuredProduct.price.toFixed(2)}</strong>
                   <button className="buy-button" type="button" onClick={() => void startCheckout(featuredProduct.id)}>
-                    Buy Featured
+                    {storeSettings.buyFeaturedButtonText}
                   </button>
                 </div>
               </div>
@@ -518,8 +554,8 @@ export default function App() {
                     )}
                   </div>
                   <div className="product-copy product-content">
-                    <p className="product-kicker">Digital Download</p>
-                    <p className="card-badge">Best Seller</p>
+                    <p className="product-kicker">{storeSettings.cardKickerText}</p>
+                    <p className="card-badge">{storeSettings.cardBadgeText}</p>
                     <h3>{product.title}</h3>
                     <p className="product-summary">{getCardSummary(product)}</p>
                     <div className="meta-row">
@@ -536,7 +572,7 @@ export default function App() {
                           openProductDetails(product);
                         }}
                       >
-                        View details
+                        {storeSettings.detailsButtonText}
                       </button>
                       <button
                         className="buy-button"
@@ -546,7 +582,7 @@ export default function App() {
                           void startCheckout(product.id);
                         }}
                       >
-                        Buy now
+                        {storeSettings.buyButtonText}
                       </button>
                     </div>
                   </div>
@@ -615,7 +651,7 @@ export default function App() {
                   type="button"
                   onClick={() => void startCheckout(selectedProduct.id)}
                 >
-                  Buy now
+                  {storeSettings.buyButtonText}
                 </button>
               </div>
             </article>

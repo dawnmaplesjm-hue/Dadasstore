@@ -23,6 +23,11 @@ input {
   font: inherit;
 }
 
+select,
+textarea {
+  font: inherit;
+}
+
 a {
   color: inherit;
 }
@@ -181,6 +186,16 @@ a {
   outline: none;
 }
 
+.form-grid select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8f5ff;
+  outline: none;
+}
+
 .form-grid textarea {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.24);
@@ -193,6 +208,11 @@ a {
 }
 
 .form-grid input:focus {
+  border-color: rgba(247, 183, 50, 0.72);
+  box-shadow: 0 0 0 4px rgba(247, 183, 50, 0.14);
+}
+
+.form-grid select:focus {
   border-color: rgba(247, 183, 50, 0.72);
   box-shadow: 0 0 0 4px rgba(247, 183, 50, 0.14);
 }

@@ -14,6 +14,17 @@ type Product = {
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
+  featuredProductId: number | null;
+  featuredProductLabel: string;
+  cardBadgeText: string;
+  cardKickerText: string;
+  shopSectionTitle: string;
+  benefitOne: string;
+  benefitTwo: string;
+  benefitThree: string;
+  detailsButtonText: string;
+  buyButtonText: string;
+  buyFeaturedButtonText: string;
 };
 
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -41,6 +52,17 @@ export default function App() {
   const [settingsError, setSettingsError] = useState('');
   const [newReleaseTitle, setNewReleaseTitle] = useState('Premium digital bundle');
   const [newReleaseMessage, setNewReleaseMessage] = useState('Buy once, download instantly, and access your files anytime.');
+  const [featuredProductId, setFeaturedProductId] = useState<number | null>(null);
+  const [featuredProductLabel, setFeaturedProductLabel] = useState('Featured pick');
+  const [cardBadgeText, setCardBadgeText] = useState('Best Seller');
+  const [cardKickerText, setCardKickerText] = useState('Digital Download');
+  const [shopSectionTitle, setShopSectionTitle] = useState('Shop Products');
+  const [benefitOne, setBenefitOne] = useState('Instant download');
+  const [benefitTwo, setBenefitTwo] = useState('Secure checkout');
+  const [benefitThree, setBenefitThree] = useState('Mobile ready');
+  const [detailsButtonText, setDetailsButtonText] = useState('View details');
+  const [buyButtonText, setBuyButtonText] = useState('Buy now');
+  const [buyFeaturedButtonText, setBuyFeaturedButtonText] = useState('Buy Featured');
 
   const getAuthHeaders = (): Record<string, string> => {
     if (!authToken) {
@@ -80,6 +102,17 @@ export default function App() {
       .then((settings: StoreSettings) => {
         setNewReleaseTitle(settings.newReleaseTitle || 'Premium digital bundle');
         setNewReleaseMessage(settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.');
+        setFeaturedProductId(typeof settings.featuredProductId === 'number' ? settings.featuredProductId : null);
+        setFeaturedProductLabel(settings.featuredProductLabel || 'Featured pick');
+        setCardBadgeText(settings.cardBadgeText || 'Best Seller');
+        setCardKickerText(settings.cardKickerText || 'Digital Download');
+        setShopSectionTitle(settings.shopSectionTitle || 'Shop Products');
+        setBenefitOne(settings.benefitOne || 'Instant download');
+        setBenefitTwo(settings.benefitTwo || 'Secure checkout');
+        setBenefitThree(settings.benefitThree || 'Mobile ready');
+        setDetailsButtonText(settings.detailsButtonText || 'View details');
+        setBuyButtonText(settings.buyButtonText || 'Buy now');
+        setBuyFeaturedButtonText(settings.buyFeaturedButtonText || 'Buy Featured');
       })
       .catch(() => setSettingsError('Unable to load store settings.'));
   }, []);
@@ -99,7 +132,18 @@ export default function App() {
         headers: getJsonAuthHeaders(),
         body: JSON.stringify({
           newReleaseTitle,
-          newReleaseMessage
+          newReleaseMessage,
+          featuredProductId,
+          featuredProductLabel,
+          cardBadgeText,
+          cardKickerText,
+          shopSectionTitle,
+          benefitOne,
+          benefitTwo,
+          benefitThree,
+          detailsButtonText,
+          buyButtonText,
+          buyFeaturedButtonText
         })
       });
 
@@ -373,7 +417,7 @@ export default function App() {
         <section className="content-grid">
           <div className="panel-card form-card">
             <h2>Storefront Banner</h2>
-            <p className="card-subtitle">Edit the customer-facing New Release section.</p>
+            <p className="card-subtitle">Edit customer-facing storefront labels, badges, and featured product content.</p>
 
             {settingsError && <div className="error-banner compact-error">{settingsError}</div>}
             {settingsMessage && <div className="success-banner">{settingsMessage}</div>}
@@ -390,8 +434,72 @@ export default function App() {
                 onChange={(event) => setNewReleaseMessage(event.target.value)}
                 rows={3}
               />
+              <select
+                value={featuredProductId === null ? '' : String(featuredProductId)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setFeaturedProductId(value ? Number(value) : null);
+                }}
+              >
+                <option value="">Auto featured product</option>
+                {products.filter((product) => product.pdfUrl).map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.title}
+                  </option>
+                ))}
+              </select>
+              <input
+                placeholder="Featured label (example: Featured pick)"
+                value={featuredProductLabel}
+                onChange={(event) => setFeaturedProductLabel(event.target.value)}
+              />
+              <input
+                placeholder="Card badge text (example: Best Seller)"
+                value={cardBadgeText}
+                onChange={(event) => setCardBadgeText(event.target.value)}
+              />
+              <input
+                placeholder="Card kicker text (example: Digital Download)"
+                value={cardKickerText}
+                onChange={(event) => setCardKickerText(event.target.value)}
+              />
+              <input
+                placeholder="Shop section title"
+                value={shopSectionTitle}
+                onChange={(event) => setShopSectionTitle(event.target.value)}
+              />
+              <input
+                placeholder="Benefit pill 1"
+                value={benefitOne}
+                onChange={(event) => setBenefitOne(event.target.value)}
+              />
+              <input
+                placeholder="Benefit pill 2"
+                value={benefitTwo}
+                onChange={(event) => setBenefitTwo(event.target.value)}
+              />
+              <input
+                placeholder="Benefit pill 3"
+                value={benefitThree}
+                onChange={(event) => setBenefitThree(event.target.value)}
+              />
+              <input
+                placeholder="Details button text"
+                value={detailsButtonText}
+                onChange={(event) => setDetailsButtonText(event.target.value)}
+              />
+              <input
+                placeholder="Buy button text"
+                value={buyButtonText}
+                onChange={(event) => setBuyButtonText(event.target.value)}
+              />
+              <input
+                placeholder="Featured buy button text"
+                value={buyFeaturedButtonText}
+                onChange={(event) => setBuyFeaturedButtonText(event.target.value)}
+              />
               <button className="muted-button" onClick={() => void saveStoreSettings()}>
-                Save New Release
+                Save Storefront Settings
               </button>
             </div>
 

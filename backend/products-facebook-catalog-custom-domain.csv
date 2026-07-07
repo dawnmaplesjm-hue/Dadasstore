@@ -1,0 +1,5 @@
+id,title,description,availability,condition,price,link,image_link,brand
+15,Upload API Test,Instant digital download.,in stock,new,5.55 USD,https://api.dadasstore.com/api/checkout/start/15,,Dada Digital Products
+18,Em,Instant digital download.,in stock,new,9.00 USD,https://api.dadasstore.com/api/checkout/start/18,,Dada Digital Products
+3,Auth Check,Instant digital download.,out of stock,new,1.23 USD,https://api.dadasstore.com/api/checkout/start/3,,Dada Digital Products
+4,Coping,Coping,in stock,new,9.00 USD,https://api.dadasstore.com/api/checkout/start/4,https://api.dadasstore.com/uploads/1783138335588-1000013819.png,Dada Digital Products

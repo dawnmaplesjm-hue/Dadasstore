@@ -339,6 +339,12 @@ function deleteUploadedFile(fileUrl) {
         fs_1.default.unlinkSync(filePath);
     }
 }
+function getNextProductId(existingProducts) {
+    const highestId = existingProducts.reduce((maxId, item) => {
+        return item.id > maxId ? item.id : maxId;
+    }, 0);
+    return highestId + 1;
+}
 function getProductPdfPath(product) {
     if (!product.pdfUrl) {
         return null;
@@ -695,7 +701,7 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
         });
     }
     const newProduct = {
-        id: products.length + 1,
+        id: getNextProductId(products),
         title,
         price,
         description: typeof description === 'string' ? description.trim() : '',
@@ -720,7 +726,7 @@ app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req, re
         return res.status(400).json({ error: 'Please choose a PDF file to upload.' });
     }
     const newProduct = {
-        id: products.length + 1,
+        id: getNextProductId(products),
         title: title.trim(),
         price: Number(price),
         description: typeof description === 'string' ? description.trim() : '',

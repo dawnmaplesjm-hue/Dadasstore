@@ -434,6 +434,14 @@ function deleteUploadedFile(fileUrl?: string) {
   }
 }
 
+function getNextProductId(existingProducts: Product[]) {
+  const highestId = existingProducts.reduce((maxId, item) => {
+    return item.id > maxId ? item.id : maxId;
+  }, 0);
+
+  return highestId + 1;
+}
+
 function getProductPdfPath(product: Product) {
   if (!product.pdfUrl) {
     return null;
@@ -860,7 +868,7 @@ app.post('/api/products', requireAdminAuth, (req: Request, res: Response) => {
   }
 
   const newProduct = {
-    id: products.length + 1,
+    id: getNextProductId(products),
     title,
     price,
     description: typeof description === 'string' ? description.trim() : '',
@@ -891,7 +899,7 @@ app.post('/api/products/upload', requireAdminAuth, uploadProductAssets, (req: Re
   }
 
   const newProduct = {
-    id: products.length + 1,
+    id: getNextProductId(products),
     title: title.trim(),
     price: Number(price),
     description: typeof description === 'string' ? description.trim() : '',

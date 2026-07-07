@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+declare global {
+  interface Window {
+    fbq?: (...args: unknown[]) => void;
+  }
+}
+
 type Product = {
   id: number;
   title: string;
@@ -23,7 +29,9 @@ type Purchase = {
 };
 
 type PurchaseResult = {
+  sessionId: string;
   productTitle: string;
+  productPrice: number;
   downloadUrl: string;
 };
 
@@ -103,6 +111,7 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const adminPressStartedAt = useRef<number | null>(null);
   const adminPressHandled = useRef(false);
+  const trackedPurchaseSessions = useRef<Set<string>>(new Set());
   const purchasableProducts = products.filter((product) => product.pdfUrl);
   const comingSoonProducts = products.filter((product) => !product.pdfUrl);
   const adminPanelUrl = getAdminPanelUrl();
@@ -229,7 +238,9 @@ export default function App() {
 
         const fullDownloadUrl = `${configuredApiBaseUrl}${data.downloadUrl}`;
         setPurchaseResult({
+          sessionId,
           productTitle: data.productTitle,
+          productPrice: Number(data.productPrice || 0),
           downloadUrl: fullDownloadUrl
         });
       })
@@ -240,6 +251,26 @@ export default function App() {
         setCheckingOut(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (!purchaseResult || checkingOut) {
+      return;
+    }
+
+    if (trackedPurchaseSessions.current.has(purchaseResult.sessionId)) {
+      return;
+    }
+
+    if (typeof window.fbq === 'function') {
+      window.fbq('track', 'Purchase', {
+        currency: 'USD',
+        value: purchaseResult.productPrice,
+        content_name: purchaseResult.productTitle
+      });
+    }
+
+    trackedPurchaseSessions.current.add(purchaseResult.sessionId);
+  }, [purchaseResult, checkingOut]);
 
   const startCheckout = async (productId: number) => {
     setError('');

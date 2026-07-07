@@ -813,6 +813,7 @@ app.get('/api/checkout/session/:sessionId', async (req: Request, res: Response) 
       sessionId: session.id,
       productId: product.id,
       productTitle: product.title,
+      productPrice: product.price,
       downloadToken,
       downloadUrl: `/api/checkout/download/${session.id}?token=${downloadToken}`
     });

@@ -133,6 +133,57 @@ function parseIsBestSeller(input) {
     }
     return false;
 }
+function parseCheckoutProductId(req) {
+    const pathValue = typeof req.params.productId === 'string' ? req.params.productId : '';
+    const queryValue = typeof req.query.product_id === 'string'
+        ? req.query.product_id
+        : typeof req.query.productId === 'string'
+            ? req.query.productId
+            : typeof req.query.id === 'string'
+                ? req.query.id
+                : '';
+    const rawValue = pathValue || queryValue;
+    const parsedValue = Number(rawValue);
+    return Number.isNaN(parsedValue) ? NaN : parsedValue;
+}
+function parseCheckoutCouponCode(req) {
+    const rawValue = typeof req.query.coupon_code === 'string'
+        ? req.query.coupon_code
+        : typeof req.query.couponCode === 'string'
+            ? req.query.couponCode
+            : typeof req.query.coupon === 'string'
+                ? req.query.coupon
+                : typeof req.query.discount_code === 'string'
+                    ? req.query.discount_code
+                    : '';
+    return rawValue.trim();
+}
+async function resolveStripeDiscount(code) {
+    if (!stripe || !code) {
+        return undefined;
+    }
+    // Accept either a Stripe coupon id or a promotion code.
+    try {
+        const coupon = await stripe.coupons.retrieve(code);
+        if (!coupon.deleted) {
+            return [{ coupon: coupon.id }];
+        }
+    }
+    catch {
+        // Keep trying as promotion code.
+    }
+    try {
+        const promotionCodes = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+        const promotionCode = promotionCodes.data[0];
+        if (promotionCode) {
+            return [{ promotion_code: promotionCode.id }];
+        }
+    }
+    catch {
+        // Fall through to invalid coupon handling.
+    }
+    return undefined;
+}
 function loadProducts() {
     if (!fs_1.default.existsSync(dataFilePath)) {
         return defaultProducts;
@@ -483,6 +534,69 @@ app.post('/api/checkout/create-session', async (req, res) => {
     catch {
         res.status(500).json({ error: 'Unable to start Stripe checkout.' });
     }
+});
+async function startCheckoutFromRequest(req, res) {
+    if (!stripe) {
+        return res.status(500).json({ error: 'Stripe is not configured on the server.' });
+    }
+    const productId = parseCheckoutProductId(req);
+    if (Number.isNaN(productId)) {
+        return res.status(400).json({ error: 'Product ID must be a number.' });
+    }
+    const product = products.find((item) => item.id === productId);
+    if (!product) {
+        return res.status(404).json({ error: 'Product not found.' });
+    }
+    if (!product.pdfUrl) {
+        return res.status(400).json({ error: 'This product does not have a downloadable file yet.' });
+    }
+    const couponCode = parseCheckoutCouponCode(req);
+    const discounts = await resolveStripeDiscount(couponCode);
+    if (couponCode && !discounts) {
+        return res.status(400).json({ error: 'Coupon code is invalid or inactive.' });
+    }
+    try {
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${frontendUrl}/?canceled=true`,
+            metadata: {
+                productId: String(product.id),
+                couponCode: couponCode || ''
+            },
+            discounts,
+            line_items: [
+                {
+                    quantity: 1,
+                    price_data: {
+                        currency: stripeCurrency,
+                        unit_amount: Math.round(product.price * 100),
+                        product_data: {
+                            name: product.title,
+                            description: product.description || product.pdfName || 'Instant digital download'
+                        }
+                    }
+                }
+            ]
+        });
+        if (!session.url) {
+            return res.status(500).json({ error: 'Stripe did not return a checkout URL.' });
+        }
+        return res.redirect(303, session.url);
+    }
+    catch {
+        return res.status(500).json({ error: 'Unable to start Stripe checkout.' });
+    }
+}
+// GET /api/checkout/start creates a Stripe Checkout session from query params.
+// Example: /api/checkout/start?product_id=1&coupon_code=SUMMER10
+app.get('/api/checkout/start', async (req, res) => {
+    return startCheckoutFromRequest(req, res);
+});
+// GET /api/checkout/start/:productId creates a Stripe Checkout session and redirects.
+// This is useful for platforms like Facebook Shop that require a fixed product checkout URL.
+app.get('/api/checkout/start/:productId', async (req, res) => {
+    return startCheckoutFromRequest(req, res);
 });
 // GET /api/checkout/session/:sessionId checks a Stripe payment and returns the purchase details.
 app.get('/api/checkout/session/:sessionId', async (req, res) => {

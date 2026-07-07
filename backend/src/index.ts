@@ -195,7 +195,42 @@ function parseIsBestSeller(input: unknown): boolean {
   return false;
 }
 
+function parseCheckoutProductsParam(req: Request): { productId: number; quantity: number } | null {
+  const productsRaw = typeof req.query.products === 'string' ? req.query.products.trim() : '';
+  if (!productsRaw) {
+    return null;
+  }
+
+  let decodedProducts = productsRaw;
+  try {
+    decodedProducts = decodeURIComponent(productsRaw);
+  } catch {
+    decodedProducts = productsRaw;
+  }
+
+  const firstProduct = decodedProducts.split(',')[0]?.trim();
+  if (!firstProduct) {
+    return null;
+  }
+
+  const [rawProductId, rawQuantity] = firstProduct.split(':');
+  const productId = Number(rawProductId);
+  const parsedQuantity = Number(rawQuantity || '1');
+  const quantity = Number.isNaN(parsedQuantity) ? 1 : Math.max(1, Math.floor(parsedQuantity));
+
+  if (Number.isNaN(productId)) {
+    return null;
+  }
+
+  return { productId, quantity };
+}
+
 function parseCheckoutProductId(req: Request): number {
+  const productsParam = parseCheckoutProductsParam(req);
+  if (productsParam) {
+    return productsParam.productId;
+  }
+
   const pathValue = typeof req.params.productId === 'string' ? req.params.productId : '';
   const queryValue = typeof req.query.product_id === 'string'
     ? req.query.product_id
@@ -209,6 +244,26 @@ function parseCheckoutProductId(req: Request): number {
   const parsedValue = Number(rawValue);
 
   return Number.isNaN(parsedValue) ? NaN : parsedValue;
+}
+
+function parseCheckoutQuantity(req: Request): number {
+  const productsParam = parseCheckoutProductsParam(req);
+  if (productsParam) {
+    return productsParam.quantity;
+  }
+
+  const rawQuantity = typeof req.query.quantity === 'string'
+    ? req.query.quantity
+    : typeof req.query.qty === 'string'
+      ? req.query.qty
+      : '1';
+
+  const parsedQuantity = Number(rawQuantity);
+  if (Number.isNaN(parsedQuantity)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(parsedQuantity));
 }
 
 function parseCheckoutCouponCode(req: Request): string {
@@ -692,6 +747,7 @@ async function startCheckoutFromRequest(req: Request, res: Response) {
     return res.status(400).json({ error: 'This product does not have a downloadable file yet.' });
   }
 
+  const quantity = parseCheckoutQuantity(req);
   const couponCode = parseCheckoutCouponCode(req);
   const discounts = await resolveStripeDiscount(couponCode);
 
@@ -711,7 +767,7 @@ async function startCheckoutFromRequest(req: Request, res: Response) {
       discounts,
       line_items: [
         {
-          quantity: 1,
+          quantity,
           price_data: {
             currency: stripeCurrency,
             unit_amount: Math.round(product.price * 100),

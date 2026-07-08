@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dadasdigitalproducts.com/sitemap.xml
+Sitemap: https://www.dadasdigitalproducts.com/sitemap.xml

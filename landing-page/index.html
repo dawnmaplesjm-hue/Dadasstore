@@ -172,6 +172,10 @@
     </div>
 
     <script>
+      const backendBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000'
+        : 'https://dadasstore-api.onrender.com';
+
       const yearEl = document.getElementById('year');
       if (yearEl) {
         yearEl.textContent = new Date().getFullYear().toString();
@@ -179,7 +183,7 @@
 
       const signupForm = document.getElementById('signup-form');
       if (signupForm) {
-        signupForm.addEventListener('submit', (event) => {
+        signupForm.addEventListener('submit', async (event) => {
           event.preventDefault();
           const name = document.getElementById('name');
           const email = document.getElementById('email');
@@ -187,6 +191,20 @@
           if (name instanceof HTMLInputElement && email instanceof HTMLInputElement) {
             localStorage.setItem('dadas-signup-name', name.value.trim());
             localStorage.setItem('dadas-signup-email', email.value.trim());
+
+            try {
+              await fetch(`${backendBaseUrl}/api/leads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name: name.value.trim(),
+                  email: email.value.trim(),
+                  source: 'landing-page'
+                })
+              });
+            } catch {
+              // Keep user flow working even if lead capture fails.
+            }
 
             if (typeof fbq === 'function') {
               fbq('track', 'Lead', {

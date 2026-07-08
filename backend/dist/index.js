@@ -64,6 +64,7 @@ if (!fs_1.default.existsSync(uploadsDir)) {
 const dataFilePath = path_1.default.join(dataDir, 'products.json');
 const purchasesFilePath = path_1.default.join(dataDir, 'purchases.json');
 const storeSettingsFilePath = path_1.default.join(dataDir, 'store-settings.json');
+const leadsFilePath = path_1.default.join(dataDir, 'leads.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
 const upload = (0, multer_1.default)({
@@ -314,11 +315,30 @@ function loadStoreSettings() {
         return defaultStoreSettings;
     }
 }
+function loadLeads() {
+    if (!fs_1.default.existsSync(leadsFilePath)) {
+        return [];
+    }
+    try {
+        const fileContents = fs_1.default.readFileSync(leadsFilePath, 'utf-8');
+        const loadedLeads = JSON.parse(fileContents);
+        if (!Array.isArray(loadedLeads)) {
+            return [];
+        }
+        return loadedLeads;
+    }
+    catch {
+        return [];
+    }
+}
 function saveProducts(productsToSave) {
     fs_1.default.writeFileSync(dataFilePath, JSON.stringify(productsToSave, null, 2), 'utf-8');
 }
 function savePurchases(purchasesToSave) {
     fs_1.default.writeFileSync(purchasesFilePath, JSON.stringify(purchasesToSave, null, 2), 'utf-8');
+}
+function saveLeads(leadsToSave) {
+    fs_1.default.writeFileSync(leadsFilePath, JSON.stringify(leadsToSave, null, 2), 'utf-8');
 }
 function createDownloadToken(sessionId, productId) {
     return crypto_1.default.createHmac('sha256', downloadSecret).update(`${sessionId}:${productId}`).digest('hex');
@@ -360,11 +380,15 @@ function getUploadedFile(req, fieldName) {
 }
 const purchases = loadPurchases();
 const storeSettings = loadStoreSettings();
+const leads = loadLeads();
 if (!fs_1.default.existsSync(purchasesFilePath)) {
     savePurchases(purchases);
 }
 if (!fs_1.default.existsSync(storeSettingsFilePath)) {
     saveStoreSettings(storeSettings);
+}
+if (!fs_1.default.existsSync(leadsFilePath)) {
+    saveLeads(leads);
 }
 function recordPurchase(sessionId, product, customerEmail) {
     const existingPurchase = purchases.find((item) => item.sessionId === sessionId);
@@ -542,6 +566,32 @@ app.post('/webhooks/stripe', express_1.default.raw({ type: 'application/json' })
 app.use(express_1.default.json());
 // "app.use" = add middleware
 // "express.json()" = understand when people send JSON
+// POST /api/leads stores signup form emails from the landing page.
+app.post('/api/leads', (req, res) => {
+    const rawEmail = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const rawName = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const rawSource = typeof req.body.source === 'string' ? req.body.source.trim() : '';
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail);
+    if (!isValidEmail) {
+        return res.status(400).json({ error: 'Please provide a valid email address.' });
+    }
+    const existingLead = leads.find((lead) => lead.email === rawEmail);
+    if (existingLead) {
+        existingLead.name = rawName || existingLead.name || '';
+        existingLead.source = rawSource || existingLead.source || 'landing-page';
+        existingLead.createdAt = new Date().toISOString();
+    }
+    else {
+        leads.unshift({
+            email: rawEmail,
+            name: rawName,
+            source: rawSource || 'landing-page',
+            createdAt: new Date().toISOString()
+        });
+    }
+    saveLeads(leads);
+    return res.status(201).json({ message: 'Lead saved.' });
+});
 // POST /api/checkout/create-session starts a Stripe Checkout flow for one product.
 app.post('/api/checkout/create-session', async (req, res) => {
     if (!stripe) {
@@ -677,6 +727,18 @@ app.get('/api/purchases/recent', (req, res) => {
     const count = Number(req.query.count || 10);
     const safeCount = Number.isNaN(count) ? 10 : Math.min(Math.max(count, 1), 20);
     res.json(purchases.slice(0, safeCount));
+});
+// GET /api/admin/purchases returns latest purchase records for admin dashboard.
+app.get('/api/admin/purchases', requireAdminAuth, (req, res) => {
+    const count = Number(req.query.count || 25);
+    const safeCount = Number.isNaN(count) ? 25 : Math.min(Math.max(count, 1), 200);
+    res.json(purchases.slice(0, safeCount));
+});
+// GET /api/admin/leads returns signup leads for admin dashboard.
+app.get('/api/admin/leads', requireAdminAuth, (req, res) => {
+    const count = Number(req.query.count || 50);
+    const safeCount = Number.isNaN(count) ? 50 : Math.min(Math.max(count, 1), 500);
+    res.json(leads.slice(0, safeCount));
 });
 // GET /api/checkout/download/:sessionId streams the PDF after payment is verified.
 app.get('/api/checkout/download/:sessionId', async (req, res) => {

@@ -28,6 +28,22 @@ type StoreSettings = {
   buyFeaturedButtonText: string;
 };
 
+type PurchaseRecord = {
+  sessionId: string;
+  productId: number;
+  productTitle: string;
+  productPrice: number;
+  customerEmail?: string;
+  purchasedAt: string;
+};
+
+type LeadRecord = {
+  email: string;
+  name?: string;
+  source?: string;
+  createdAt: string;
+};
+
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
@@ -66,6 +82,8 @@ export default function App() {
   const [detailsButtonText, setDetailsButtonText] = useState('View details');
   const [buyButtonText, setBuyButtonText] = useState('Buy now');
   const [buyFeaturedButtonText, setBuyFeaturedButtonText] = useState('Buy Featured');
+  const [recentPurchases, setRecentPurchases] = useState<PurchaseRecord[]>([]);
+  const [recentLeads, setRecentLeads] = useState<LeadRecord[]>([]);
 
   const getAuthHeaders = (): Record<string, string> => {
     if (!authToken) {
@@ -119,6 +137,116 @@ export default function App() {
       })
       .catch(() => setSettingsError('Unable to load store settings.'));
   }, []);
+
+  useEffect(() => {
+    if (!authToken) {
+      setRecentPurchases([]);
+      setRecentLeads([]);
+      return;
+    }
+
+    fetch(`${configuredApiBaseUrl}/api/admin/purchases?count=25`, {
+      headers: getAuthHeaders()
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearSession();
+          }
+          throw new Error('Unable to load purchases.');
+        }
+
+        return res.json();
+      })
+      .then((records: PurchaseRecord[]) => {
+        setRecentPurchases(Array.isArray(records) ? records : []);
+      })
+      .catch(() => {
+        setError('Unable to load recent purchases.');
+      });
+
+    fetch(`${configuredApiBaseUrl}/api/admin/leads?count=50`, {
+      headers: getAuthHeaders()
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearSession();
+          }
+          throw new Error('Unable to load leads.');
+        }
+
+        return res.json();
+      })
+      .then((records: LeadRecord[]) => {
+        setRecentLeads(Array.isArray(records) ? records : []);
+      })
+      .catch(() => {
+        setError('Unable to load signup emails.');
+      });
+  }, [authToken]);
+
+  const formatAdminDate = (isoDate: string) => {
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) {
+      return 'Unknown date';
+    }
+
+    return date.toLocaleString();
+  };
+
+  const escapeCsvValue = (value: string) => {
+    const normalized = value.replace(/\r?\n/g, ' ').replace(/"/g, '""');
+    return `"${normalized}"`;
+  };
+
+  const downloadCsv = (fileName: string, headers: string[], rows: string[][]) => {
+    const headerRow = headers.map(escapeCsvValue).join(',');
+    const bodyRows = rows.map((row) => row.map((cell) => escapeCsvValue(cell)).join(','));
+    const csvContent = [headerRow, ...bodyRows].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportPurchasesCsv = () => {
+    const rows = recentPurchases.map((purchase) => [
+      purchase.sessionId,
+      String(purchase.productId),
+      purchase.productTitle,
+      purchase.productPrice.toFixed(2),
+      purchase.customerEmail || '',
+      purchase.purchasedAt
+    ]);
+
+    downloadCsv(
+      'dadasstore-purchases.csv',
+      ['sessionId', 'productId', 'productTitle', 'productPrice', 'customerEmail', 'purchasedAt'],
+      rows
+    );
+  };
+
+  const exportLeadsCsv = () => {
+    const rows = recentLeads.map((lead) => [
+      lead.email,
+      lead.name || '',
+      lead.source || 'landing-page',
+      lead.createdAt
+    ]);
+
+    downloadCsv(
+      'dadasstore-signup-emails.csv',
+      ['email', 'name', 'source', 'createdAt'],
+      rows
+    );
+  };
 
   const saveStoreSettings = async () => {
     setSettingsError('');
@@ -434,6 +562,14 @@ export default function App() {
               <strong>{products.filter((product) => product.pdfUrl).length}</strong>
               <span>PDF products</span>
             </div>
+            <div>
+              <strong>{recentPurchases.length}</strong>
+              <span>Recent purchases</span>
+            </div>
+            <div>
+              <strong>{recentLeads.length}</strong>
+              <span>Signup emails</span>
+            </div>
           </div>
         </section>
 
@@ -702,6 +838,80 @@ export default function App() {
                         </div>
                       </div>
                     )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="insights-grid">
+          <div className="panel-card list-card">
+            <div className="list-header">
+              <div>
+                <h2>Recent Purchases</h2>
+                <p className="card-subtitle">See customer purchases as Stripe checkouts complete.</p>
+              </div>
+              <button
+                className="muted-button compact-button"
+                type="button"
+                onClick={exportPurchasesCsv}
+                disabled={!authToken || recentPurchases.length === 0}
+              >
+                Export CSV
+              </button>
+            </div>
+
+            {!authToken ? (
+              <p className="empty-state">Login as admin to view customer purchases.</p>
+            ) : recentPurchases.length === 0 ? (
+              <p className="empty-state">No purchases recorded yet.</p>
+            ) : (
+              <ul className="data-list">
+                {recentPurchases.map((purchase) => (
+                  <li key={`${purchase.sessionId}-${purchase.purchasedAt}`} className="data-item">
+                    <div className="data-title-row">
+                      <strong>{purchase.productTitle}</strong>
+                      <span>${purchase.productPrice.toFixed(2)}</span>
+                    </div>
+                    <p>{purchase.customerEmail || 'No customer email from checkout'}</p>
+                    <p>{formatAdminDate(purchase.purchasedAt)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="panel-card list-card">
+            <div className="list-header">
+              <div>
+                <h2>Signup Emails</h2>
+                <p className="card-subtitle">Collected from the landing page free guide form.</p>
+              </div>
+              <button
+                className="muted-button compact-button"
+                type="button"
+                onClick={exportLeadsCsv}
+                disabled={!authToken || recentLeads.length === 0}
+              >
+                Export CSV
+              </button>
+            </div>
+
+            {!authToken ? (
+              <p className="empty-state">Login as admin to view signup emails.</p>
+            ) : recentLeads.length === 0 ? (
+              <p className="empty-state">No signup emails recorded yet.</p>
+            ) : (
+              <ul className="data-list">
+                {recentLeads.map((lead) => (
+                  <li key={`${lead.email}-${lead.createdAt}`} className="data-item">
+                    <div className="data-title-row">
+                      <strong>{lead.email}</strong>
+                      <span>{lead.source || 'landing-page'}</span>
+                    </div>
+                    <p>{lead.name || 'No name provided'}</p>
+                    <p>{formatAdminDate(lead.createdAt)}</p>
                   </li>
                 ))}
               </ul>

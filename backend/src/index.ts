@@ -471,11 +471,6 @@ if (!fs.existsSync(storeSettingsFilePath)) {
   saveStoreSettings(storeSettings);
 }
 
-// Tell Express to understand JSON after the Stripe webhook route.
-app.use(express.json());
-// "app.use" = add middleware
-// "express.json()" = understand when people send JSON
-
 function recordPurchase(sessionId: string, product: Product, customerEmail?: string) {
   const existingPurchase = purchases.find((item) => item.sessionId === sessionId);
   if (existingPurchase) {
@@ -659,6 +654,10 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
       event = JSON.parse(req.body.toString('utf-8')) as Stripe.Event;
     }
   } catch {
+    if (stripeWebhookSecret) {
+      return res.status(400).send('Invalid Stripe signature. Check STRIPE_WEBHOOK_SECRET for this endpoint.');
+    }
+
     return res.status(400).send('Invalid Stripe webhook payload.');
   }
 

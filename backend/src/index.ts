@@ -640,8 +640,7 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
   res.json({ token: adminToken });
 });
 
-// POST /api/webhooks/stripe lets Stripe tell the server when payment succeeds.
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+const handleStripeWebhook = async (req: Request, res: Response) => {
   if (!stripe) {
     return res.status(500).send('Stripe is not configured.');
   }
@@ -676,7 +675,12 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   }
 
   return res.json({ received: true });
-});
+};
+
+// POST /api/webhooks/stripe lets Stripe tell the server when payment succeeds.
+// POST /webhooks/stripe is kept as a compatibility alias for misconfigured dashboard URLs.
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Tell Express to understand JSON after the Stripe webhook route.
 app.use(express.json());

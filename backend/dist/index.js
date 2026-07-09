@@ -114,6 +114,9 @@ const defaultProducts = [
 const defaultStoreSettings = {
     newReleaseTitle: 'Premium digital bundle',
     newReleaseMessage: 'Buy once, download instantly, and access your files anytime.',
+    saleBannerEnabled: false,
+    saleBannerTitle: 'Sale now live',
+    saleBannerMessage: 'Limited-time savings on digital products.',
     featuredProductId: null,
     featuredProductLabel: 'Featured pick',
     cardBadgeText: 'Best Seller',
@@ -402,6 +405,15 @@ function loadStoreSettings() {
             newReleaseMessage: typeof loadedSettings.newReleaseMessage === 'string'
                 ? loadedSettings.newReleaseMessage
                 : defaultStoreSettings.newReleaseMessage,
+            saleBannerEnabled: typeof loadedSettings.saleBannerEnabled === 'boolean'
+                ? loadedSettings.saleBannerEnabled
+                : defaultStoreSettings.saleBannerEnabled,
+            saleBannerTitle: typeof loadedSettings.saleBannerTitle === 'string'
+                ? loadedSettings.saleBannerTitle
+                : defaultStoreSettings.saleBannerTitle,
+            saleBannerMessage: typeof loadedSettings.saleBannerMessage === 'string'
+                ? loadedSettings.saleBannerMessage
+                : defaultStoreSettings.saleBannerMessage,
             featuredProductId: typeof loadedSettings.featuredProductId === 'number'
                 ? loadedSettings.featuredProductId
                 : defaultStoreSettings.featuredProductId,
@@ -628,6 +640,11 @@ app.put('/api/admin/store-settings', requireAdminAuth, (req, res) => {
     const payload = req.body;
     storeSettings.newReleaseTitle = sanitizeStoreText(payload.newReleaseTitle, defaultStoreSettings.newReleaseTitle);
     storeSettings.newReleaseMessage = sanitizeStoreText(payload.newReleaseMessage, defaultStoreSettings.newReleaseMessage);
+    storeSettings.saleBannerTitle = sanitizeStoreText(payload.saleBannerTitle, defaultStoreSettings.saleBannerTitle);
+    storeSettings.saleBannerMessage = sanitizeStoreText(payload.saleBannerMessage, defaultStoreSettings.saleBannerMessage);
+    if (typeof payload.saleBannerEnabled === 'boolean') {
+        storeSettings.saleBannerEnabled = payload.saleBannerEnabled;
+    }
     storeSettings.featuredProductLabel = sanitizeStoreText(payload.featuredProductLabel, defaultStoreSettings.featuredProductLabel);
     storeSettings.cardBadgeText = sanitizeStoreText(payload.cardBadgeText, defaultStoreSettings.cardBadgeText);
     storeSettings.cardKickerText = sanitizeStoreText(payload.cardKickerText, defaultStoreSettings.cardKickerText);

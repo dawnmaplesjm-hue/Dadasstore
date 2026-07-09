@@ -54,6 +54,9 @@ type PendingCheckout = {
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
+  saleBannerEnabled: boolean;
+  saleBannerTitle: string;
+  saleBannerMessage: string;
   featuredProductId: number | null;
   featuredProductLabel: string;
   cardBadgeText: string;
@@ -105,6 +108,9 @@ export default function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     newReleaseTitle: 'Premium digital bundle',
     newReleaseMessage: 'Buy once, download instantly, and access your files anytime.',
+    saleBannerEnabled: false,
+    saleBannerTitle: 'Sale now live',
+    saleBannerMessage: 'Limited-time savings on digital products.',
     featuredProductId: null,
     featuredProductLabel: 'Featured pick',
     cardBadgeText: 'Best Seller',
@@ -124,6 +130,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
+  const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
   const [sortBy, setSortBy] = useState<'featured' | 'price-low' | 'price-high' | 'name'>('featured');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -177,6 +184,9 @@ export default function App() {
           setStoreSettings({
             newReleaseTitle: settings.newReleaseTitle || 'Premium digital bundle',
             newReleaseMessage: settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.',
+            saleBannerEnabled: Boolean(settings.saleBannerEnabled),
+            saleBannerTitle: settings.saleBannerTitle || 'Sale now live',
+            saleBannerMessage: settings.saleBannerMessage || 'Limited-time savings on digital products.',
             featuredProductId: typeof settings.featuredProductId === 'number' ? settings.featuredProductId : null,
             featuredProductLabel: settings.featuredProductLabel || 'Featured pick',
             cardBadgeText: settings.cardBadgeText || 'Best Seller',
@@ -431,6 +441,16 @@ export default function App() {
     setSelectedProduct(product);
   };
 
+  const openCheckoutPanel = (product: Product) => {
+    setCheckoutProduct(product);
+    setPendingCheckout(null);
+  };
+
+  const closeCheckoutPanel = () => {
+    setCheckoutProduct(null);
+    setPendingCheckout(null);
+  };
+
   const closeProductDetails = () => {
     setSelectedProduct(null);
   };
@@ -505,6 +525,15 @@ export default function App() {
           <p>{storeSettings.newReleaseMessage}</p>
         </section>
 
+        {storeSettings.saleBannerEnabled && (
+          <section className="status success">
+            <div>
+              <strong>{storeSettings.saleBannerTitle}</strong>
+              <p>{storeSettings.saleBannerMessage}</p>
+            </div>
+          </section>
+        )}
+
         <section className="store-benefits" aria-label="Store benefits">
           <span className="benefit-pill">{storeSettings.benefitOne}</span>
           <span className="benefit-pill">{storeSettings.benefitTwo}</span>
@@ -531,29 +560,6 @@ export default function App() {
           </select>
         </section>
 
-        <section className="coupon-strip" aria-label="Promotion code">
-          <input
-            type="text"
-            value={couponCode}
-            onChange={(event) => {
-              setCouponCode(event.target.value.toUpperCase());
-              setPendingCheckout(null);
-            }}
-            placeholder="Promotion code (optional)"
-            aria-label="Promotion code"
-          />
-          <button
-            className="icon-pill"
-            type="button"
-            onClick={() => {
-              setCouponCode('');
-              setPendingCheckout(null);
-            }}
-          >
-            Clear
-          </button>
-        </section>
-
         {error && <div className="status error">{error}</div>}
 
         {checkingOut && (
@@ -561,27 +567,6 @@ export default function App() {
             <div>
               <strong>Processing payment</strong>
               <p>Verifying your payment and preparing the download...</p>
-            </div>
-          </section>
-        )}
-
-        {pendingCheckout && (
-          <section className="status success coupon-preview">
-            <div>
-              <strong>Discount applied: {pendingCheckout.coupon.code}</strong>
-              <p>
-                {pendingCheckout.productTitle}: ${pendingCheckout.coupon.originalPrice.toFixed(2)} to
-                {' '}${pendingCheckout.coupon.discountedPrice.toFixed(2)}
-              </p>
-              <p>You save ${pendingCheckout.coupon.discountValue.toFixed(2)}. Continue to secure checkout?</p>
-            </div>
-            <div className="coupon-preview-actions">
-              <button className="buy-button" type="button" onClick={confirmPendingCheckout}>
-                Continue
-              </button>
-              <button className="secondary-button" type="button" onClick={cancelPendingCheckout}>
-                Cancel
-              </button>
             </div>
           </section>
         )}
@@ -620,7 +605,7 @@ export default function App() {
                 <p>{featuredProduct.description || featuredProduct.pdfName || 'Instant download after payment.'}</p>
                 <div className="featured-actions">
                   <strong>${featuredProduct.price.toFixed(2)}</strong>
-                  <button className="buy-button" type="button" onClick={() => void startCheckout(featuredProduct.id)}>
+                  <button className="buy-button" type="button" onClick={() => openCheckoutPanel(featuredProduct)}>
                     {storeSettings.buyFeaturedButtonText}
                   </button>
                 </div>
@@ -700,7 +685,7 @@ export default function App() {
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
-                          void startCheckout(product.id);
+                          openCheckoutPanel(product);
                         }}
                       >
                         {storeSettings.buyButtonText}
@@ -770,11 +755,78 @@ export default function App() {
                 <button
                   className="buy-button"
                   type="button"
-                  onClick={() => void startCheckout(selectedProduct.id)}
+                  onClick={() => {
+                    closeProductDetails();
+                    openCheckoutPanel(selectedProduct);
+                  }}
                 >
                   {storeSettings.buyButtonText}
                 </button>
               </div>
+            </article>
+          </section>
+        )}
+
+        {checkoutProduct && (
+          <section className="product-modal-overlay" onClick={closeCheckoutPanel}>
+            <article className="product-modal checkout-modal" onClick={(event) => event.stopPropagation()}>
+              <button className="modal-close" type="button" onClick={closeCheckoutPanel}>Close</button>
+              <p className="modal-label">Checkout</p>
+              <h3>{checkoutProduct.title}</h3>
+              <p>Apply a promo code below if you have one, then continue to secure payment.</p>
+              <div className="modal-row">
+                <strong>${checkoutProduct.price.toFixed(2)}</strong>
+              </div>
+
+              <section className="coupon-strip checkout-coupon-strip" aria-label="Promotion code">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(event) => {
+                    setCouponCode(event.target.value.toUpperCase());
+                    setPendingCheckout(null);
+                  }}
+                  placeholder="Promotion code (optional)"
+                  aria-label="Promotion code"
+                />
+                <button
+                  className="icon-pill"
+                  type="button"
+                  onClick={() => {
+                    setCouponCode('');
+                    setPendingCheckout(null);
+                  }}
+                >
+                  Clear
+                </button>
+              </section>
+
+              {pendingCheckout && (
+                <section className="status success coupon-preview">
+                  <div>
+                    <strong>Discount applied: {pendingCheckout.coupon.code}</strong>
+                    <p>
+                      {pendingCheckout.productTitle}: ${pendingCheckout.coupon.originalPrice.toFixed(2)} to
+                      {' '}${pendingCheckout.coupon.discountedPrice.toFixed(2)}
+                    </p>
+                    <p>You save ${pendingCheckout.coupon.discountValue.toFixed(2)}. Continue to secure checkout?</p>
+                  </div>
+                  <div className="coupon-preview-actions">
+                    <button className="buy-button" type="button" onClick={confirmPendingCheckout}>
+                      Continue
+                    </button>
+                    <button className="secondary-button" type="button" onClick={cancelPendingCheckout}>
+                      Change code
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {!pendingCheckout && (
+                <button className="buy-button" type="button" onClick={() => void startCheckout(checkoutProduct.id)}>
+                  Continue to secure checkout
+                </button>
+              )}
             </article>
           </section>
         )}

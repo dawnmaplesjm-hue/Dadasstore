@@ -15,6 +15,9 @@ type Product = {
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
+  saleBannerEnabled: boolean;
+  saleBannerTitle: string;
+  saleBannerMessage: string;
   featuredProductId: number | null;
   featuredProductLabel: string;
   cardBadgeText: string;
@@ -93,6 +96,9 @@ export default function App() {
   const [settingsError, setSettingsError] = useState('');
   const [newReleaseTitle, setNewReleaseTitle] = useState('Premium digital bundle');
   const [newReleaseMessage, setNewReleaseMessage] = useState('Buy once, download instantly, and access your files anytime.');
+  const [saleBannerEnabled, setSaleBannerEnabled] = useState(false);
+  const [saleBannerTitle, setSaleBannerTitle] = useState('Sale now live');
+  const [saleBannerMessage, setSaleBannerMessage] = useState('Limited-time savings on digital products.');
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(null);
   const [featuredProductLabel, setFeaturedProductLabel] = useState('Featured pick');
   const [cardBadgeText, setCardBadgeText] = useState('Best Seller');
@@ -164,6 +170,9 @@ export default function App() {
       .then((settings: StoreSettings) => {
         setNewReleaseTitle(settings.newReleaseTitle || 'Premium digital bundle');
         setNewReleaseMessage(settings.newReleaseMessage || 'Buy once, download instantly, and access your files anytime.');
+        setSaleBannerEnabled(Boolean(settings.saleBannerEnabled));
+        setSaleBannerTitle(settings.saleBannerTitle || 'Sale now live');
+        setSaleBannerMessage(settings.saleBannerMessage || 'Limited-time savings on digital products.');
         setFeaturedProductId(typeof settings.featuredProductId === 'number' ? settings.featuredProductId : null);
         setFeaturedProductLabel(settings.featuredProductLabel || 'Featured pick');
         setCardBadgeText(settings.cardBadgeText || 'Best Seller');
@@ -569,6 +578,9 @@ export default function App() {
         body: JSON.stringify({
           newReleaseTitle,
           newReleaseMessage,
+          saleBannerEnabled,
+          saleBannerTitle,
+          saleBannerMessage,
           featuredProductId,
           featuredProductLabel,
           cardBadgeText,
@@ -921,6 +933,25 @@ export default function App() {
                 value={newReleaseMessage}
                 onChange={(event) => setNewReleaseMessage(event.target.value)}
                 rows={3}
+              />
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={saleBannerEnabled}
+                  onChange={(event) => setSaleBannerEnabled(event.target.checked)}
+                />
+                <span>Show sale banner on storefront</span>
+              </label>
+              <input
+                placeholder="Sale banner title"
+                value={saleBannerTitle}
+                onChange={(event) => setSaleBannerTitle(event.target.value)}
+              />
+              <textarea
+                placeholder="Sale banner message"
+                value={saleBannerMessage}
+                onChange={(event) => setSaleBannerMessage(event.target.value)}
+                rows={2}
               />
               <select
                 value={featuredProductId === null ? '' : String(featuredProductId)}

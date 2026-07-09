@@ -239,6 +239,10 @@ a {
   flex-wrap: wrap;
 }
 
+.checkout-coupon-strip {
+  margin-top: 4px;
+}
+
 .status {
   border-radius: 16px;
   padding: 12px 14px;
@@ -750,6 +754,10 @@ a {
 
 .modal-row strong {
   font-size: 1.2rem;
+}
+
+.checkout-modal {
+  gap: 14px;
 }
 
 @media (max-width: 900px) {

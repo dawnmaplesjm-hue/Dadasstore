@@ -35,6 +35,22 @@ type PurchaseResult = {
   downloadUrl: string;
 };
 
+type CouponPreview = {
+  code: string;
+  applied: boolean;
+  kind: 'percent' | 'fixed' | '';
+  amount: number;
+  originalPrice: number;
+  discountedPrice: number;
+  discountValue: number;
+};
+
+type PendingCheckout = {
+  url: string;
+  productTitle: string;
+  coupon: CouponPreview;
+};
+
 type StoreSettings = {
   newReleaseTitle: string;
   newReleaseMessage: string;
@@ -106,6 +122,8 @@ export default function App() {
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
   const [activeList, setActiveList] = useState<'buy' | 'soon'>('buy');
   const [sortBy, setSortBy] = useState<'featured' | 'price-low' | 'price-high' | 'name'>('featured');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -274,12 +292,17 @@ export default function App() {
 
   const startCheckout = async (productId: number) => {
     setError('');
+    const normalizedCoupon = couponCode.trim().toUpperCase();
+    const checkoutProduct = products.find((item) => item.id === productId);
 
     try {
       const response = await fetchFromApi('/api/checkout/create-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId })
+        body: JSON.stringify({
+          productId,
+          couponCode: normalizedCoupon || undefined
+        })
       });
 
       const data = await response.json();
@@ -288,10 +311,32 @@ export default function App() {
         throw new Error(data.error || 'Unable to start checkout.');
       }
 
+      const couponPreview = data.coupon as CouponPreview | undefined;
+      if (couponPreview?.applied && couponPreview.discountValue > 0) {
+        setPendingCheckout({
+          url: data.checkoutUrl,
+          productTitle: checkoutProduct?.title || 'Selected product',
+          coupon: couponPreview
+        });
+        return;
+      }
+
       window.location.href = data.checkoutUrl;
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to start checkout.');
     }
+  };
+
+  const confirmPendingCheckout = () => {
+    if (!pendingCheckout) {
+      return;
+    }
+
+    window.location.href = pendingCheckout.url;
+  };
+
+  const cancelPendingCheckout = () => {
+    setPendingCheckout(null);
   };
 
   const formatPurchaseDate = (isoDate: string) => new Date(isoDate).toLocaleDateString();
@@ -486,6 +531,29 @@ export default function App() {
           </select>
         </section>
 
+        <section className="coupon-strip" aria-label="Promotion code">
+          <input
+            type="text"
+            value={couponCode}
+            onChange={(event) => {
+              setCouponCode(event.target.value.toUpperCase());
+              setPendingCheckout(null);
+            }}
+            placeholder="Promotion code (optional)"
+            aria-label="Promotion code"
+          />
+          <button
+            className="icon-pill"
+            type="button"
+            onClick={() => {
+              setCouponCode('');
+              setPendingCheckout(null);
+            }}
+          >
+            Clear
+          </button>
+        </section>
+
         {error && <div className="status error">{error}</div>}
 
         {checkingOut && (
@@ -493,6 +561,27 @@ export default function App() {
             <div>
               <strong>Processing payment</strong>
               <p>Verifying your payment and preparing the download...</p>
+            </div>
+          </section>
+        )}
+
+        {pendingCheckout && (
+          <section className="status success coupon-preview">
+            <div>
+              <strong>Discount applied: {pendingCheckout.coupon.code}</strong>
+              <p>
+                {pendingCheckout.productTitle}: ${pendingCheckout.coupon.originalPrice.toFixed(2)} to
+                {' '}${pendingCheckout.coupon.discountedPrice.toFixed(2)}
+              </p>
+              <p>You save ${pendingCheckout.coupon.discountValue.toFixed(2)}. Continue to secure checkout?</p>
+            </div>
+            <div className="coupon-preview-actions">
+              <button className="buy-button" type="button" onClick={confirmPendingCheckout}>
+                Continue
+              </button>
+              <button className="secondary-button" type="button" onClick={cancelPendingCheckout}>
+                Cancel
+              </button>
             </div>
           </section>
         )}

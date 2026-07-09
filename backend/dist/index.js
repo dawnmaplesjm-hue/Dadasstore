@@ -65,8 +65,17 @@ const dataFilePath = path_1.default.join(dataDir, 'products.json');
 const purchasesFilePath = path_1.default.join(dataDir, 'purchases.json');
 const storeSettingsFilePath = path_1.default.join(dataDir, 'store-settings.json');
 const leadsFilePath = path_1.default.join(dataDir, 'leads.json');
+const promotionsFilePath = path_1.default.join(dataDir, 'promotions.json');
+const globalSaleFilePath = path_1.default.join(dataDir, 'global-sale.json');
 // Make uploaded files available through a URL.
 app.use('/uploads', express_1.default.static(uploadsDir));
+const jsonBodyParser = express_1.default.json();
+app.use((req, res, next) => {
+    if (req.path === '/api/webhooks/stripe' || req.path === '/webhooks/stripe') {
+        return next();
+    }
+    return jsonBodyParser(req, res, next);
+});
 const upload = (0, multer_1.default)({
     storage: multer_1.default.diskStorage({
         destination: (_req, _file, callback) => callback(null, uploadsDir),
@@ -203,6 +212,123 @@ function parseCheckoutCouponCode(req) {
                     ? req.query.discount_code
                     : '';
     return rawValue.trim();
+}
+function normalizePromotionCode(input) {
+    return input.trim().toUpperCase();
+}
+function loadPromotions() {
+    if (!fs_1.default.existsSync(promotionsFilePath)) {
+        return [];
+    }
+    try {
+        const fileContents = fs_1.default.readFileSync(promotionsFilePath, 'utf-8');
+        const loadedPromotions = JSON.parse(fileContents);
+        if (!Array.isArray(loadedPromotions)) {
+            return [];
+        }
+        return loadedPromotions;
+    }
+    catch {
+        return [];
+    }
+}
+function loadGlobalSale() {
+    if (!fs_1.default.existsSync(globalSaleFilePath)) {
+        return {
+            active: false,
+            kind: 'percent',
+            amount: 0,
+            label: 'Store Sale',
+            updatedAt: new Date().toISOString()
+        };
+    }
+    try {
+        const fileContents = fs_1.default.readFileSync(globalSaleFilePath, 'utf-8');
+        const loadedSale = JSON.parse(fileContents);
+        return {
+            active: Boolean(loadedSale.active),
+            kind: loadedSale.kind === 'fixed' ? 'fixed' : 'percent',
+            amount: typeof loadedSale.amount === 'number' ? loadedSale.amount : 0,
+            label: typeof loadedSale.label === 'string' && loadedSale.label.trim() ? loadedSale.label.trim() : 'Store Sale',
+            startsAt: typeof loadedSale.startsAt === 'string' && loadedSale.startsAt.trim() ? loadedSale.startsAt.trim() : undefined,
+            endsAt: typeof loadedSale.endsAt === 'string' && loadedSale.endsAt.trim() ? loadedSale.endsAt.trim() : undefined,
+            updatedAt: typeof loadedSale.updatedAt === 'string' ? loadedSale.updatedAt : new Date().toISOString()
+        };
+    }
+    catch {
+        return {
+            active: false,
+            kind: 'percent',
+            amount: 0,
+            label: 'Store Sale',
+            updatedAt: new Date().toISOString()
+        };
+    }
+}
+function savePromotions(promotionsToSave) {
+    fs_1.default.writeFileSync(promotionsFilePath, JSON.stringify(promotionsToSave, null, 2), 'utf-8');
+}
+function saveGlobalSale(globalSaleToSave) {
+    fs_1.default.writeFileSync(globalSaleFilePath, JSON.stringify(globalSaleToSave, null, 2), 'utf-8');
+}
+function isPromotionActive(promotion) {
+    if (!promotion.active) {
+        return false;
+    }
+    const now = Date.now();
+    if (promotion.startsAt) {
+        const startsAt = Date.parse(promotion.startsAt);
+        if (!Number.isNaN(startsAt) && now < startsAt) {
+            return false;
+        }
+    }
+    if (promotion.endsAt) {
+        const endsAt = Date.parse(promotion.endsAt);
+        if (!Number.isNaN(endsAt) && now > endsAt) {
+            return false;
+        }
+    }
+    return true;
+}
+function calculateUnitAmountWithPromotion(baseUnitAmount, promotion) {
+    if (promotion.kind === 'percent') {
+        const discountMultiplier = Math.max(0, Math.min(100, promotion.amount));
+        const discounted = Math.round(baseUnitAmount * (1 - discountMultiplier / 100));
+        return Math.max(50, discounted);
+    }
+    const fixedDiscountCents = Math.round(Math.max(0, promotion.amount) * 100);
+    return Math.max(50, baseUnitAmount - fixedDiscountCents);
+}
+function getActivePromotionByCode(rawCode, promotions) {
+    const normalizedCode = normalizePromotionCode(rawCode);
+    if (!normalizedCode) {
+        return null;
+    }
+    const matchedPromotion = promotions.find((promotion) => normalizePromotionCode(promotion.code) === normalizedCode);
+    if (!matchedPromotion || !isPromotionActive(matchedPromotion)) {
+        return null;
+    }
+    return matchedPromotion;
+}
+function getActiveGlobalSalePromotion(globalSale) {
+    if (!globalSale.active || globalSale.amount <= 0) {
+        return null;
+    }
+    const pseudoPromotion = {
+        code: 'STORE_SALE',
+        kind: globalSale.kind,
+        amount: globalSale.amount,
+        active: globalSale.active,
+        description: globalSale.label,
+        startsAt: globalSale.startsAt,
+        endsAt: globalSale.endsAt,
+        createdAt: globalSale.updatedAt,
+        updatedAt: globalSale.updatedAt
+    };
+    if (!isPromotionActive(pseudoPromotion)) {
+        return null;
+    }
+    return pseudoPromotion;
 }
 async function resolveStripeDiscount(code) {
     if (!stripe || !code) {
@@ -381,6 +507,8 @@ function getUploadedFile(req, fieldName) {
 const purchases = loadPurchases();
 const storeSettings = loadStoreSettings();
 const leads = loadLeads();
+const promotions = loadPromotions();
+const globalSale = loadGlobalSale();
 if (!fs_1.default.existsSync(purchasesFilePath)) {
     savePurchases(purchases);
 }
@@ -389,6 +517,12 @@ if (!fs_1.default.existsSync(storeSettingsFilePath)) {
 }
 if (!fs_1.default.existsSync(leadsFilePath)) {
     saveLeads(leads);
+}
+if (!fs_1.default.existsSync(promotionsFilePath)) {
+    savePromotions(promotions);
+}
+if (!fs_1.default.existsSync(globalSaleFilePath)) {
+    saveGlobalSale(globalSale);
 }
 function recordPurchase(sessionId, product, customerEmail) {
     const existingPurchase = purchases.find((item) => item.sessionId === sessionId);
@@ -522,6 +656,134 @@ app.post('/api/admin/login', (req, res) => {
     }
     res.json({ token: adminToken });
 });
+// GET /api/admin/promotions returns promotion codes configured in admin.
+app.get('/api/admin/promotions', requireAdminAuth, (_req, res) => {
+    res.json(promotions);
+});
+// POST /api/admin/promotions creates a new promotion code.
+app.post('/api/admin/promotions', requireAdminAuth, (req, res) => {
+    const payload = req.body;
+    const code = normalizePromotionCode(typeof payload.code === 'string' ? payload.code : '');
+    const kind = payload.kind === 'fixed' ? 'fixed' : payload.kind === 'percent' ? 'percent' : null;
+    const amount = Number(payload.amount);
+    if (!code || !/^[A-Z0-9_-]{3,32}$/.test(code)) {
+        return res.status(400).json({ error: 'Code must be 3-32 chars using letters, numbers, _ or -.' });
+    }
+    if (!kind) {
+        return res.status(400).json({ error: 'Promotion type must be percent or fixed.' });
+    }
+    if (Number.isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than 0.' });
+    }
+    if (kind === 'percent' && amount > 100) {
+        return res.status(400).json({ error: 'Percent promotions cannot be greater than 100.' });
+    }
+    if (promotions.some((promotion) => normalizePromotionCode(promotion.code) === code)) {
+        return res.status(409).json({ error: 'A promotion with this code already exists.' });
+    }
+    const now = new Date().toISOString();
+    const createdPromotion = {
+        code,
+        kind,
+        amount,
+        active: payload.active !== false,
+        description: typeof payload.description === 'string' ? payload.description.trim() : '',
+        startsAt: typeof payload.startsAt === 'string' && payload.startsAt.trim() ? payload.startsAt.trim() : undefined,
+        endsAt: typeof payload.endsAt === 'string' && payload.endsAt.trim() ? payload.endsAt.trim() : undefined,
+        createdAt: now,
+        updatedAt: now
+    };
+    promotions.unshift(createdPromotion);
+    savePromotions(promotions);
+    return res.status(201).json(createdPromotion);
+});
+// PUT /api/admin/promotions/:code updates an existing promotion code.
+app.put('/api/admin/promotions/:code', requireAdminAuth, (req, res) => {
+    const routeCode = normalizePromotionCode(req.params.code || '');
+    const promotion = promotions.find((item) => normalizePromotionCode(item.code) === routeCode);
+    if (!promotion) {
+        return res.status(404).json({ error: 'Promotion not found.' });
+    }
+    const payload = req.body;
+    if (typeof payload.kind === 'string') {
+        if (payload.kind !== 'percent' && payload.kind !== 'fixed') {
+            return res.status(400).json({ error: 'Promotion type must be percent or fixed.' });
+        }
+        promotion.kind = payload.kind;
+    }
+    if (payload.amount !== undefined) {
+        const amount = Number(payload.amount);
+        if (Number.isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ error: 'Amount must be greater than 0.' });
+        }
+        if (promotion.kind === 'percent' && amount > 100) {
+            return res.status(400).json({ error: 'Percent promotions cannot be greater than 100.' });
+        }
+        promotion.amount = amount;
+    }
+    if (typeof payload.active === 'boolean') {
+        promotion.active = payload.active;
+    }
+    if (typeof payload.description === 'string') {
+        promotion.description = payload.description.trim();
+    }
+    if (payload.startsAt !== undefined) {
+        promotion.startsAt = typeof payload.startsAt === 'string' && payload.startsAt.trim() ? payload.startsAt.trim() : undefined;
+    }
+    if (payload.endsAt !== undefined) {
+        promotion.endsAt = typeof payload.endsAt === 'string' && payload.endsAt.trim() ? payload.endsAt.trim() : undefined;
+    }
+    promotion.updatedAt = new Date().toISOString();
+    savePromotions(promotions);
+    return res.json(promotion);
+});
+// DELETE /api/admin/promotions/:code removes a promotion code.
+app.delete('/api/admin/promotions/:code', requireAdminAuth, (req, res) => {
+    const routeCode = normalizePromotionCode(req.params.code || '');
+    const index = promotions.findIndex((item) => normalizePromotionCode(item.code) === routeCode);
+    if (index === -1) {
+        return res.status(404).json({ error: 'Promotion not found.' });
+    }
+    promotions.splice(index, 1);
+    savePromotions(promotions);
+    return res.json({ message: 'Promotion deleted successfully.' });
+});
+// GET /api/admin/global-sale returns no-code store-wide sale settings.
+app.get('/api/admin/global-sale', requireAdminAuth, (_req, res) => {
+    res.json(globalSale);
+});
+// PUT /api/admin/global-sale updates no-code store-wide sale settings.
+app.put('/api/admin/global-sale', requireAdminAuth, (req, res) => {
+    const payload = req.body;
+    if (typeof payload.active === 'boolean') {
+        globalSale.active = payload.active;
+    }
+    if (payload.kind === 'percent' || payload.kind === 'fixed') {
+        globalSale.kind = payload.kind;
+    }
+    if (payload.amount !== undefined) {
+        const amount = Number(payload.amount);
+        if (Number.isNaN(amount) || amount < 0) {
+            return res.status(400).json({ error: 'Sale amount must be 0 or greater.' });
+        }
+        if (globalSale.kind === 'percent' && amount > 100) {
+            return res.status(400).json({ error: 'Percent sale amount cannot exceed 100.' });
+        }
+        globalSale.amount = amount;
+    }
+    if (typeof payload.label === 'string') {
+        globalSale.label = payload.label.trim() || 'Store Sale';
+    }
+    if (payload.startsAt !== undefined) {
+        globalSale.startsAt = typeof payload.startsAt === 'string' && payload.startsAt.trim() ? payload.startsAt.trim() : undefined;
+    }
+    if (payload.endsAt !== undefined) {
+        globalSale.endsAt = typeof payload.endsAt === 'string' && payload.endsAt.trim() ? payload.endsAt.trim() : undefined;
+    }
+    globalSale.updatedAt = new Date().toISOString();
+    saveGlobalSale(globalSale);
+    return res.json(globalSale);
+});
 const handleStripeWebhook = async (req, res) => {
     if (!stripe) {
         return res.status(500).send('Stripe is not configured.');
@@ -562,10 +824,6 @@ const handleStripeWebhook = async (req, res) => {
 // POST /webhooks/stripe is kept as a compatibility alias for misconfigured dashboard URLs.
 app.post('/api/webhooks/stripe', express_1.default.raw({ type: 'application/json' }), handleStripeWebhook);
 app.post('/webhooks/stripe', express_1.default.raw({ type: 'application/json' }), handleStripeWebhook);
-// Tell Express to understand JSON after the Stripe webhook route.
-app.use(express_1.default.json());
-// "app.use" = add middleware
-// "express.json()" = understand when people send JSON
 // POST /api/leads stores signup form emails from the landing page.
 app.post('/api/leads', (req, res) => {
     const rawEmail = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
@@ -609,18 +867,39 @@ app.post('/api/checkout/create-session', async (req, res) => {
     if (!product.pdfUrl) {
         return res.status(400).json({ error: 'This product does not have a downloadable file yet.' });
     }
+    const baseUnitAmount = Math.round(product.price * 100);
+    const couponCode = typeof req.body.couponCode === 'string' ? req.body.couponCode.trim() : '';
+    const localPromotion = couponCode ? getActivePromotionByCode(couponCode, promotions) : null;
+    const globalSalePromotion = couponCode ? null : getActiveGlobalSalePromotion(globalSale);
+    const appliedPromotion = localPromotion || globalSalePromotion;
+    const stripeDiscounts = couponCode && !localPromotion ? await resolveStripeDiscount(couponCode) : undefined;
+    if (couponCode && !localPromotion && !stripeDiscounts) {
+        return res.status(400).json({ error: 'Coupon code is invalid or inactive.' });
+    }
+    const unitAmount = appliedPromotion
+        ? calculateUnitAmountWithPromotion(baseUnitAmount, appliedPromotion)
+        : baseUnitAmount;
+    const originalPrice = Number((baseUnitAmount / 100).toFixed(2));
+    const discountedPrice = Number((unitAmount / 100).toFixed(2));
+    const discountValue = Number((originalPrice - discountedPrice).toFixed(2));
     try {
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             success_url: `${requestOrigin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${requestOrigin}/?canceled=true`,
-            metadata: { productId: String(product.id) },
+            metadata: {
+                productId: String(product.id),
+                couponCode: couponCode || '',
+                localPromotionCode: localPromotion?.code || '',
+                globalSaleApplied: globalSalePromotion ? 'true' : 'false'
+            },
+            discounts: stripeDiscounts,
             line_items: [
                 {
                     quantity: 1,
                     price_data: {
                         currency: stripeCurrency,
-                        unit_amount: Math.round(product.price * 100),
+                        unit_amount: unitAmount,
                         product_data: {
                             name: product.title,
                             description: product.description || product.pdfName || 'Instant digital download'
@@ -632,7 +911,19 @@ app.post('/api/checkout/create-session', async (req, res) => {
         if (!session.url) {
             return res.status(500).json({ error: 'Stripe did not return a checkout URL.' });
         }
-        res.json({ checkoutUrl: session.url });
+        res.json({
+            checkoutUrl: session.url,
+            coupon: {
+                code: localPromotion?.code || (globalSalePromotion ? globalSale.label : couponCode || ''),
+                applied: Boolean(appliedPromotion),
+                kind: appliedPromotion?.kind || '',
+                amount: appliedPromotion?.amount || 0,
+                source: localPromotion ? 'code' : globalSalePromotion ? 'global-sale' : 'none',
+                originalPrice,
+                discountedPrice,
+                discountValue
+            }
+        });
     }
     catch {
         res.status(500).json({ error: 'Unable to start Stripe checkout.' });
@@ -655,8 +946,15 @@ async function startCheckoutFromRequest(req, res) {
     }
     const quantity = parseCheckoutQuantity(req);
     const couponCode = parseCheckoutCouponCode(req);
-    const discounts = await resolveStripeDiscount(couponCode);
-    if (couponCode && !discounts) {
+    const baseUnitAmount = Math.round(product.price * 100);
+    const localPromotion = couponCode ? getActivePromotionByCode(couponCode, promotions) : null;
+    const globalSalePromotion = couponCode ? null : getActiveGlobalSalePromotion(globalSale);
+    const appliedPromotion = localPromotion || globalSalePromotion;
+    const discounts = couponCode && !localPromotion ? await resolveStripeDiscount(couponCode) : undefined;
+    const unitAmount = appliedPromotion
+        ? calculateUnitAmountWithPromotion(baseUnitAmount, appliedPromotion)
+        : baseUnitAmount;
+    if (couponCode && !localPromotion && !discounts) {
         return res.status(400).json({ error: 'Coupon code is invalid or inactive.' });
     }
     try {
@@ -666,7 +964,9 @@ async function startCheckoutFromRequest(req, res) {
             cancel_url: `${frontendUrl}/?canceled=true`,
             metadata: {
                 productId: String(product.id),
-                couponCode: couponCode || ''
+                couponCode: couponCode || '',
+                localPromotionCode: localPromotion?.code || '',
+                globalSaleApplied: globalSalePromotion ? 'true' : 'false'
             },
             discounts,
             line_items: [
@@ -674,7 +974,7 @@ async function startCheckoutFromRequest(req, res) {
                     quantity,
                     price_data: {
                         currency: stripeCurrency,
-                        unit_amount: Math.round(product.price * 100),
+                        unit_amount: unitAmount,
                         product_data: {
                             name: product.title,
                             description: product.description || product.pdfName || 'Instant digital download'

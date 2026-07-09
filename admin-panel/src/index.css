@@ -502,6 +502,10 @@ a {
   font-size: 0.9rem;
 }
 
+.promo-list {
+  margin-top: 12px;
+}
+
 @media (max-width: 900px) {
   .hero-card,
   .content-grid,

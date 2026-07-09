@@ -44,6 +44,28 @@ type LeadRecord = {
   createdAt: string;
 };
 
+type PromotionRecord = {
+  code: string;
+  kind: 'percent' | 'fixed';
+  amount: number;
+  active: boolean;
+  description?: string;
+  startsAt?: string;
+  endsAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type GlobalSaleSettings = {
+  active: boolean;
+  kind: 'percent' | 'fixed';
+  amount: number;
+  label: string;
+  startsAt?: string;
+  endsAt?: string;
+  updatedAt: string;
+};
+
 const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || apiBaseUrl;
 
@@ -84,6 +106,25 @@ export default function App() {
   const [buyFeaturedButtonText, setBuyFeaturedButtonText] = useState('Buy Featured');
   const [recentPurchases, setRecentPurchases] = useState<PurchaseRecord[]>([]);
   const [recentLeads, setRecentLeads] = useState<LeadRecord[]>([]);
+  const [promotions, setPromotions] = useState<PromotionRecord[]>([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoKind, setPromoKind] = useState<'percent' | 'fixed'>('percent');
+  const [promoAmount, setPromoAmount] = useState('10');
+  const [promoDescription, setPromoDescription] = useState('');
+  const [promoStartsAt, setPromoStartsAt] = useState('');
+  const [promoEndsAt, setPromoEndsAt] = useState('');
+  const [promoActive, setPromoActive] = useState(true);
+  const [editingPromoCode, setEditingPromoCode] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [promoMessage, setPromoMessage] = useState('');
+  const [globalSaleActive, setGlobalSaleActive] = useState(false);
+  const [globalSaleKind, setGlobalSaleKind] = useState<'percent' | 'fixed'>('percent');
+  const [globalSaleAmount, setGlobalSaleAmount] = useState('0');
+  const [globalSaleLabel, setGlobalSaleLabel] = useState('Store Sale');
+  const [globalSaleStartsAt, setGlobalSaleStartsAt] = useState('');
+  const [globalSaleEndsAt, setGlobalSaleEndsAt] = useState('');
+  const [globalSaleError, setGlobalSaleError] = useState('');
+  const [globalSaleMessage, setGlobalSaleMessage] = useState('');
 
   const getAuthHeaders = (): Record<string, string> => {
     if (!authToken) {
@@ -142,6 +183,7 @@ export default function App() {
     if (!authToken) {
       setRecentPurchases([]);
       setRecentLeads([]);
+      setPromotions([]);
       return;
     }
 
@@ -184,7 +226,270 @@ export default function App() {
       .catch(() => {
         setError('Unable to load signup emails.');
       });
+
+    fetch(`${configuredApiBaseUrl}/api/admin/promotions`, {
+      headers: getAuthHeaders()
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearSession();
+          }
+          throw new Error('Unable to load promotions.');
+        }
+
+        return res.json();
+      })
+      .then((records: PromotionRecord[]) => {
+        setPromotions(Array.isArray(records) ? records : []);
+      })
+      .catch(() => {
+        setError('Unable to load promotions.');
+      });
+
+    fetch(`${configuredApiBaseUrl}/api/admin/global-sale`, {
+      headers: getAuthHeaders()
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearSession();
+          }
+          throw new Error('Unable to load store-wide sale settings.');
+        }
+
+        return res.json();
+      })
+      .then((settings: GlobalSaleSettings) => {
+        setGlobalSaleActive(Boolean(settings.active));
+        setGlobalSaleKind(settings.kind === 'fixed' ? 'fixed' : 'percent');
+        setGlobalSaleAmount(String(settings.amount || 0));
+        setGlobalSaleLabel(settings.label || 'Store Sale');
+        setGlobalSaleStartsAt(toDateTimeLocal(settings.startsAt));
+        setGlobalSaleEndsAt(toDateTimeLocal(settings.endsAt));
+      })
+      .catch(() => {
+        setError('Unable to load store-wide sale settings.');
+      });
   }, [authToken]);
+
+  const toDateTimeLocal = (isoDate?: string) => {
+    if (!isoDate) {
+      return '';
+    }
+
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const hours = String(parsed.getHours()).padStart(2, '0');
+    const minutes = String(parsed.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const resetPromotionForm = () => {
+    setPromoCode('');
+    setPromoKind('percent');
+    setPromoAmount('10');
+    setPromoDescription('');
+    setPromoStartsAt('');
+    setPromoEndsAt('');
+    setPromoActive(true);
+    setEditingPromoCode(null);
+  };
+
+  const savePromotion = async () => {
+    setPromoError('');
+    setPromoMessage('');
+
+    if (!authToken) {
+      setPromoError('Please login as admin to manage promotions.');
+      return;
+    }
+
+    const normalizedCode = promoCode.trim().toUpperCase();
+    const numericAmount = Number(promoAmount);
+
+    if (!normalizedCode) {
+      setPromoError('Please enter a promotion code.');
+      return;
+    }
+
+    if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+      setPromoError('Please enter a valid promotion amount greater than zero.');
+      return;
+    }
+
+    try {
+      const method = editingPromoCode ? 'PUT' : 'POST';
+      const endpoint = editingPromoCode
+        ? `${configuredApiBaseUrl}/api/admin/promotions/${encodeURIComponent(editingPromoCode)}`
+        : `${configuredApiBaseUrl}/api/admin/promotions`;
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({
+          code: normalizedCode,
+          kind: promoKind,
+          amount: numericAmount,
+          active: promoActive,
+          description: promoDescription.trim(),
+          startsAt: promoStartsAt ? new Date(promoStartsAt).toISOString() : '',
+          endsAt: promoEndsAt ? new Date(promoEndsAt).toISOString() : ''
+        })
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to save promotion.');
+        setPromoError(message);
+        return;
+      }
+
+      const savedPromotion = (await response.json()) as PromotionRecord;
+      setPromotions((current) => {
+        const exists = current.some((item) => item.code === savedPromotion.code);
+        if (exists) {
+          return current.map((item) => (item.code === savedPromotion.code ? savedPromotion : item));
+        }
+
+        return [savedPromotion, ...current];
+      });
+
+      setPromoMessage(editingPromoCode ? 'Promotion updated.' : 'Promotion created.');
+      resetPromotionForm();
+    } catch {
+      setPromoError('Unable to reach the server while saving promotion.');
+    }
+  };
+
+  const startPromotionEdit = (promotion: PromotionRecord) => {
+    setPromoError('');
+    setPromoMessage('');
+    setEditingPromoCode(promotion.code);
+    setPromoCode(promotion.code);
+    setPromoKind(promotion.kind);
+    setPromoAmount(String(promotion.amount));
+    setPromoDescription(promotion.description || '');
+    setPromoStartsAt(toDateTimeLocal(promotion.startsAt));
+    setPromoEndsAt(toDateTimeLocal(promotion.endsAt));
+    setPromoActive(promotion.active);
+  };
+
+  const deletePromotion = async (code: string) => {
+    if (!authToken) {
+      setPromoError('Please login as admin to manage promotions.');
+      return;
+    }
+
+    if (!window.confirm(`Delete promotion code ${code}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/admin/promotions/${encodeURIComponent(code)}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to delete promotion.');
+        setPromoError(message);
+        return;
+      }
+
+      setPromotions((current) => current.filter((item) => item.code !== code));
+      setPromoMessage('Promotion deleted.');
+      if (editingPromoCode === code) {
+        resetPromotionForm();
+      }
+    } catch {
+      setPromoError('Unable to reach the server while deleting promotion.');
+    }
+  };
+
+  const saveGlobalSale = async () => {
+    setGlobalSaleError('');
+    setGlobalSaleMessage('');
+
+    if (!authToken) {
+      setGlobalSaleError('Please login as admin to manage store-wide sale settings.');
+      return;
+    }
+
+    const numericAmount = Number(globalSaleAmount);
+    if (Number.isNaN(numericAmount) || numericAmount < 0) {
+      setGlobalSaleError('Sale amount must be 0 or greater.');
+      return;
+    }
+
+    if (globalSaleKind === 'percent' && numericAmount > 100) {
+      setGlobalSaleError('Percent sale amount cannot exceed 100.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/admin/global-sale`, {
+        method: 'PUT',
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({
+          active: globalSaleActive,
+          kind: globalSaleKind,
+          amount: numericAmount,
+          label: globalSaleLabel.trim() || 'Store Sale',
+          startsAt: globalSaleStartsAt ? new Date(globalSaleStartsAt).toISOString() : '',
+          endsAt: globalSaleEndsAt ? new Date(globalSaleEndsAt).toISOString() : ''
+        })
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to save store-wide sale settings.');
+        setGlobalSaleError(message);
+        return;
+      }
+
+      const saved = (await response.json()) as GlobalSaleSettings;
+      setGlobalSaleActive(Boolean(saved.active));
+      setGlobalSaleKind(saved.kind === 'fixed' ? 'fixed' : 'percent');
+      setGlobalSaleAmount(String(saved.amount || 0));
+      setGlobalSaleLabel(saved.label || 'Store Sale');
+      setGlobalSaleStartsAt(toDateTimeLocal(saved.startsAt));
+      setGlobalSaleEndsAt(toDateTimeLocal(saved.endsAt));
+      setGlobalSaleMessage('Store-wide sale settings saved.');
+    } catch {
+      setGlobalSaleError('Unable to reach the server while saving store-wide sale settings.');
+    }
+  };
+
+  const togglePromotionActive = async (promotion: PromotionRecord) => {
+    if (!authToken) {
+      setPromoError('Please login as admin to manage promotions.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${configuredApiBaseUrl}/api/admin/promotions/${encodeURIComponent(promotion.code)}`, {
+        method: 'PUT',
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({ active: !promotion.active })
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Unable to update promotion.');
+        setPromoError(message);
+        return;
+      }
+
+      const updatedPromotion = (await response.json()) as PromotionRecord;
+      setPromotions((current) => current.map((item) => (item.code === updatedPromotion.code ? updatedPromotion : item)));
+    } catch {
+      setPromoError('Unable to reach the server while updating promotion.');
+    }
+  };
 
   const formatAdminDate = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -683,6 +988,151 @@ export default function App() {
               />
               <button className="muted-button" onClick={() => void saveStoreSettings()}>
                 Save Storefront Settings
+              </button>
+            </div>
+
+            <h2>Promotions & Sales</h2>
+            <p className="card-subtitle">Create discount codes customers can use at checkout.</p>
+
+            {promoError && <div className="error-banner compact-error">{promoError}</div>}
+            {promoMessage && <div className="success-banner">{promoMessage}</div>}
+
+            <div className="form-grid">
+              <input
+                placeholder="Code (example: SUMMER20)"
+                value={promoCode}
+                onChange={(event) => setPromoCode(event.target.value.toUpperCase())}
+              />
+              <select
+                value={promoKind}
+                onChange={(event) => setPromoKind(event.target.value as 'percent' | 'fixed')}
+              >
+                <option value="percent">Percent discount (%)</option>
+                <option value="fixed">Fixed discount ($)</option>
+              </select>
+              <input
+                placeholder={promoKind === 'percent' ? 'Discount percent' : 'Discount amount in dollars'}
+                value={promoAmount}
+                onChange={(event) => setPromoAmount(event.target.value)}
+              />
+              <textarea
+                placeholder="Internal note/description (optional)"
+                value={promoDescription}
+                onChange={(event) => setPromoDescription(event.target.value)}
+                rows={2}
+              />
+              <input
+                type="datetime-local"
+                value={promoStartsAt}
+                onChange={(event) => setPromoStartsAt(event.target.value)}
+              />
+              <input
+                type="datetime-local"
+                value={promoEndsAt}
+                onChange={(event) => setPromoEndsAt(event.target.value)}
+              />
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={promoActive}
+                  onChange={(event) => setPromoActive(event.target.checked)}
+                />
+                <span>Active promotion</span>
+              </label>
+              <div className="product-actions">
+                <button className="muted-button" type="button" onClick={() => void savePromotion()}>
+                  {editingPromoCode ? 'Update Promotion' : 'Create Promotion'}
+                </button>
+                {editingPromoCode && (
+                  <button className="muted-button" type="button" onClick={resetPromotionForm}>
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {promotions.length > 0 && (
+              <ul className="product-list promo-list">
+                {promotions.map((promotion) => (
+                  <li key={promotion.code} className="product-card">
+                    <div className="product-main">
+                      <div>
+                        <strong>{promotion.code}</strong>
+                        <div className="product-price">
+                          {promotion.kind === 'percent'
+                            ? `${promotion.amount}% off`
+                            : `$${promotion.amount.toFixed(2)} off`}
+                        </div>
+                        <p className="product-description">
+                          {promotion.description || 'No description provided'}
+                        </p>
+                        <p className="product-description">
+                          {promotion.active ? 'Active' : 'Inactive'}
+                          {promotion.startsAt ? ` | Starts ${formatAdminDate(promotion.startsAt)}` : ''}
+                          {promotion.endsAt ? ` | Ends ${formatAdminDate(promotion.endsAt)}` : ''}
+                        </p>
+                      </div>
+                      <div className="product-actions">
+                        <button className="muted-button" type="button" onClick={() => startPromotionEdit(promotion)}>
+                          Edit
+                        </button>
+                        <button className="muted-button" type="button" onClick={() => void togglePromotionActive(promotion)}>
+                          {promotion.active ? 'Disable' : 'Enable'}
+                        </button>
+                        <button className="danger-button" type="button" onClick={() => void deletePromotion(promotion.code)}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <h2>Store-Wide Sale (No Code)</h2>
+            <p className="card-subtitle">Turn on an automatic discount for every product checkout.</p>
+
+            {globalSaleError && <div className="error-banner compact-error">{globalSaleError}</div>}
+            {globalSaleMessage && <div className="success-banner">{globalSaleMessage}</div>}
+
+            <div className="form-grid">
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={globalSaleActive}
+                  onChange={(event) => setGlobalSaleActive(event.target.checked)}
+                />
+                <span>Enable automatic store-wide sale</span>
+              </label>
+              <input
+                placeholder="Sale label (example: Summer Sale)"
+                value={globalSaleLabel}
+                onChange={(event) => setGlobalSaleLabel(event.target.value)}
+              />
+              <select
+                value={globalSaleKind}
+                onChange={(event) => setGlobalSaleKind(event.target.value as 'percent' | 'fixed')}
+              >
+                <option value="percent">Percent off (%)</option>
+                <option value="fixed">Fixed off ($)</option>
+              </select>
+              <input
+                placeholder={globalSaleKind === 'percent' ? 'Percent amount' : 'Dollar amount'}
+                value={globalSaleAmount}
+                onChange={(event) => setGlobalSaleAmount(event.target.value)}
+              />
+              <input
+                type="datetime-local"
+                value={globalSaleStartsAt}
+                onChange={(event) => setGlobalSaleStartsAt(event.target.value)}
+              />
+              <input
+                type="datetime-local"
+                value={globalSaleEndsAt}
+                onChange={(event) => setGlobalSaleEndsAt(event.target.value)}
+              />
+              <button className="muted-button" type="button" onClick={() => void saveGlobalSale()}>
+                Save Store-Wide Sale
               </button>
             </div>
 

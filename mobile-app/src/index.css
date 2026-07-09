@@ -210,6 +210,35 @@ a {
   min-width: 190px;
 }
 
+.coupon-strip {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.coupon-strip input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 12px 14px;
+  color: #40285d;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.coupon-preview {
+  align-items: flex-start;
+}
+
+.coupon-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .status {
   border-radius: 16px;
   padding: 12px 14px;

@@ -146,6 +146,22 @@ function parseIsBestSeller(input) {
     }
     return false;
 }
+function parseCheckoutProductToken(rawProductId) {
+    const normalizedValue = rawProductId.trim();
+    if (!normalizedValue) {
+        return NaN;
+    }
+    const numericValue = Number(normalizedValue);
+    if (!Number.isNaN(numericValue)) {
+        return numericValue;
+    }
+    // Facebook catalogs often use IDs like p-3-1. We map these back to the numeric product id.
+    const catalogMatch = normalizedValue.match(/^p-(\d+)(?:-\d+)?$/i);
+    if (catalogMatch?.[1]) {
+        return Number(catalogMatch[1]);
+    }
+    return NaN;
+}
 function parseCheckoutProductsParam(req) {
     const productsRaw = typeof req.query.products === 'string' ? req.query.products.trim() : '';
     if (!productsRaw) {
@@ -158,23 +174,27 @@ function parseCheckoutProductsParam(req) {
     catch {
         decodedProducts = productsRaw;
     }
-    const firstProduct = decodedProducts.split(',')[0]?.trim();
-    if (!firstProduct) {
-        return null;
-    }
-    const [rawProductId, rawQuantity] = firstProduct.split(':');
-    const productId = Number(rawProductId);
-    const parsedQuantity = Number(rawQuantity || '1');
-    const quantity = Number.isNaN(parsedQuantity) ? 1 : Math.max(1, Math.floor(parsedQuantity));
-    if (Number.isNaN(productId)) {
-        return null;
-    }
-    return { productId, quantity };
+    const parsedProducts = decodedProducts
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((entry) => {
+        const [rawProductId, rawQuantity] = entry.split(':');
+        const productId = parseCheckoutProductToken(rawProductId || '');
+        const parsedQuantity = Number(rawQuantity || '1');
+        const quantity = Number.isNaN(parsedQuantity) ? 1 : Math.max(1, Math.floor(parsedQuantity));
+        if (Number.isNaN(productId)) {
+            return null;
+        }
+        return { productId, quantity };
+    })
+        .filter((entry) => Boolean(entry));
+    return parsedProducts.length > 0 ? parsedProducts : null;
 }
 function parseCheckoutProductId(req) {
     const productsParam = parseCheckoutProductsParam(req);
-    if (productsParam) {
-        return productsParam.productId;
+    if (productsParam && productsParam.length > 0) {
+        return productsParam[0].productId;
     }
     const pathValue = typeof req.params.productId === 'string' ? req.params.productId : '';
     const queryValue = typeof req.query.product_id === 'string'
@@ -185,13 +205,13 @@ function parseCheckoutProductId(req) {
                 ? req.query.id
                 : '';
     const rawValue = pathValue || queryValue;
-    const parsedValue = Number(rawValue);
+    const parsedValue = parseCheckoutProductToken(rawValue);
     return Number.isNaN(parsedValue) ? NaN : parsedValue;
 }
 function parseCheckoutQuantity(req) {
     const productsParam = parseCheckoutProductsParam(req);
-    if (productsParam) {
-        return productsParam.quantity;
+    if (productsParam && productsParam.length > 0) {
+        return productsParam[0].quantity;
     }
     const rawQuantity = typeof req.query.quantity === 'string'
         ? req.query.quantity
@@ -950,55 +970,72 @@ async function startCheckoutFromRequest(req, res) {
     if (!stripe) {
         return res.status(500).json({ error: 'Stripe is not configured on the server.' });
     }
-    const productId = parseCheckoutProductId(req);
-    if (Number.isNaN(productId)) {
+    const requestedProductsFromParam = parseCheckoutProductsParam(req);
+    const requestedProducts = requestedProductsFromParam && requestedProductsFromParam.length > 0
+        ? requestedProductsFromParam
+        : (() => {
+            const productId = parseCheckoutProductId(req);
+            if (Number.isNaN(productId)) {
+                return [];
+            }
+            return [{ productId, quantity: parseCheckoutQuantity(req) }];
+        })();
+    if (requestedProducts.length === 0) {
         return res.status(400).json({ error: 'Product ID must be a number.' });
     }
-    const product = products.find((item) => item.id === productId);
-    if (!product) {
-        return res.status(404).json({ error: 'Product not found.' });
+    const checkoutItems = requestedProducts.map(({ productId, quantity }) => {
+        const product = products.find((item) => item.id === productId);
+        return { productId, quantity, product };
+    });
+    const missingProduct = checkoutItems.find((item) => !item.product);
+    if (missingProduct) {
+        return res.status(404).json({ error: `Product not found for id ${missingProduct.productId}.` });
     }
-    if (!product.pdfUrl) {
-        return res.status(400).json({ error: 'This product does not have a downloadable file yet.' });
+    const productWithoutFile = checkoutItems.find((item) => !item.product?.pdfUrl);
+    if (productWithoutFile) {
+        return res.status(400).json({ error: `Product ${productWithoutFile.product?.title || productWithoutFile.productId} does not have a downloadable file yet.` });
     }
-    const quantity = parseCheckoutQuantity(req);
     const couponCode = parseCheckoutCouponCode(req);
-    const baseUnitAmount = Math.round(product.price * 100);
     const localPromotion = couponCode ? getActivePromotionByCode(couponCode, promotions) : null;
     const globalSalePromotion = couponCode ? null : getActiveGlobalSalePromotion(globalSale);
     const appliedPromotion = localPromotion || globalSalePromotion;
     const discounts = couponCode && !localPromotion ? await resolveStripeDiscount(couponCode) : undefined;
-    const unitAmount = appliedPromotion
-        ? calculateUnitAmountWithPromotion(baseUnitAmount, appliedPromotion)
-        : baseUnitAmount;
     if (couponCode && !localPromotion && !discounts) {
         return res.status(400).json({ error: 'Coupon code is invalid or inactive.' });
     }
+    const lineItems = checkoutItems.map((item) => {
+        const product = item.product;
+        const baseUnitAmount = Math.round(product.price * 100);
+        const unitAmount = appliedPromotion
+            ? calculateUnitAmountWithPromotion(baseUnitAmount, appliedPromotion)
+            : baseUnitAmount;
+        return {
+            quantity: item.quantity,
+            price_data: {
+                currency: stripeCurrency,
+                unit_amount: unitAmount,
+                product_data: {
+                    name: product.title,
+                    description: product.description || product.pdfName || 'Instant digital download'
+                }
+            }
+        };
+    });
+    const primaryProductId = requestedProducts[0]?.productId;
     try {
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${frontendUrl}/?canceled=true`,
             metadata: {
-                productId: String(product.id),
+                productId: String(primaryProductId),
+                productIds: requestedProducts.map((item) => item.productId).join(','),
                 couponCode: couponCode || '',
                 localPromotionCode: localPromotion?.code || '',
                 globalSaleApplied: globalSalePromotion ? 'true' : 'false'
             },
             discounts,
-            line_items: [
-                {
-                    quantity,
-                    price_data: {
-                        currency: stripeCurrency,
-                        unit_amount: unitAmount,
-                        product_data: {
-                            name: product.title,
-                            description: product.description || product.pdfName || 'Instant digital download'
-                        }
-                    }
-                }
-            ]
+            line_items: lineItems
         });
         if (!session.url) {
             return res.status(500).json({ error: 'Stripe did not return a checkout URL.' });

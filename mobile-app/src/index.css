@@ -155,6 +155,100 @@ a {
   color: rgba(255, 255, 255, 0.9);
 }
 
+.sale-banner {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background:
+    radial-gradient(circle at 88% 18%, rgba(255, 213, 126, 0.35), transparent 46%),
+    linear-gradient(125deg, #0f6f68 0%, #14577d 45%, #1f3a92 100%);
+  box-shadow: 0 18px 34px rgba(6, 20, 44, 0.44);
+  display: grid;
+  gap: 10px;
+}
+
+.sale-banner::after {
+  content: '';
+  position: absolute;
+  inset: auto -10% -45% auto;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.sale-banner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sale-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.16);
+  color: #f8fffe;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.sale-kicker {
+  margin: 0;
+  color: rgba(229, 255, 248, 0.85);
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sale-banner-copy {
+  display: grid;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+
+.sale-banner-copy strong {
+  font-size: 1.08rem;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.sale-banner-copy p {
+  margin: 0;
+  color: rgba(231, 248, 255, 0.92);
+  font-size: 0.88rem;
+}
+
+.sale-banner-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.sale-banner-pills span {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ecfffb;
+  padding: 5px 9px;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
 .cta-pill {
   border: none;
   border-radius: 999px;
@@ -796,6 +890,11 @@ a {
 
   .top-row h1 {
     font-size: 1.25rem;
+  }
+
+  .sale-banner-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .promo-banner h2 {

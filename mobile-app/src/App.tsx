@@ -526,10 +526,19 @@ export default function App() {
         </section>
 
         {storeSettings.saleBannerEnabled && (
-          <section className="status success">
-            <div>
+          <section className="sale-banner" aria-label="Active sale">
+            <div className="sale-banner-head">
+              <span className="sale-badge">Sale live</span>
+              <p className="sale-kicker">Limited-time savings</p>
+            </div>
+            <div className="sale-banner-copy">
               <strong>{storeSettings.saleBannerTitle}</strong>
               <p>{storeSettings.saleBannerMessage}</p>
+            </div>
+            <div className="sale-banner-pills" aria-hidden="true">
+              <span>Instant discount</span>
+              <span>Auto applied</span>
+              <span>Secure checkout</span>
             </div>
           </section>
         )}

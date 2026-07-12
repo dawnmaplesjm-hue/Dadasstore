@@ -251,6 +251,17 @@ a {
   color: var(--muted);
 }
 
+.return-policy ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.return-policy li + li {
+  margin-top: 4px;
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

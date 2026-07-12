@@ -6,7 +6,7 @@ Welcome! This is YOUR e-commerce app for selling ebooks, worksheets, and lesson 
 
 ## 📁 Project Structure
 
-```
+```text
 Dadasstore/
 ├── backend/              # The "brain" - handles products, payments
 ├── admin-panel/          # Your dashboard to upload products
@@ -47,6 +47,24 @@ cd backend
 npm install
 npm run dev
 ```
+
+## Google Merchant Center Feed (Digital Products)
+
+Use the backend script to generate a tab-delimited feed and optionally push products through the Google Content API.
+
+```bash
+cd backend
+npm install
+
+# 1) Export a tab-delimited feed file (merchant-feed.tsv)
+npm run merchant:feed
+
+# 2) Export + sync to Google Merchant Center using Content API
+# (requires MERCHANT_CENTER_ID and service-account credentials in backend/.env)
+npm run merchant:sync
+```
+
+The feed pulls from `backend/products.json`, so your admin panel product list is the source of truth.
 
 ---
 
